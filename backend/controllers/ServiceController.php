@@ -6,7 +6,6 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class ServiceController
 {
-    /** Public: anyone (including guests) can browse the service catalog. */
     public static function list(): void
     {
         $db = Database::connect();
@@ -14,7 +13,6 @@ class ServiceController
         Response::success($stmt->fetchAll());
     }
 
-    /** Admin/manager: add a new service to the catalog. */
     public static function create(array $body): void
     {
         $payload = require_auth();
@@ -23,23 +21,23 @@ class ServiceController
         $name = trim($body['name'] ?? '');
         $description = trim($body['description'] ?? '');
         $price = $body['estimated_price'] ?? null;
+        $imageUrl = trim($body['image_url'] ?? '');
 
         if (!$name) {
             Response::error('Service name is required.');
         }
 
-        $stmt = $db = Database::connect();
+        $db = Database::connect();
         $ins = $db->prepare(
-            'INSERT INTO services (name, description, estimated_price) VALUES (:name, :desc, :price) RETURNING id'
+            'INSERT INTO services (name, description, estimated_price, image_url) VALUES (:name, :desc, :price, :image) RETURNING id'
         );
-        $ins->execute([':name' => $name, ':desc' => $description ?: null, ':price' => $price]);
+        $ins->execute([':name' => $name, ':desc' => $description ?: null, ':price' => $price, ':image' => $imageUrl ?: null]);
         $id = $ins->fetch()['id'];
 
         Audit::log($payload['id'], $payload['role'], 'Added service to catalog', 'services', $id);
         Response::success(['id' => $id], 'Service added.', 201);
     }
 
-    /** Admin/manager: edit or deactivate a service. */
     public static function update(int $id, array $body): void
     {
         $payload = require_auth();
@@ -57,11 +55,12 @@ class ServiceController
         $description = $body['description'] ?? $service['description'];
         $price = $body['estimated_price'] ?? $service['estimated_price'];
         $isActive = array_key_exists('is_active', $body) ? (bool) $body['is_active'] : $service['is_active'];
+        $imageUrl = array_key_exists('image_url', $body) ? $body['image_url'] : $service['image_url'];
 
         $upd = $db->prepare(
-            'UPDATE services SET name = :name, description = :desc, estimated_price = :price, is_active = :active WHERE id = :id'
+            'UPDATE services SET name = :name, description = :desc, estimated_price = :price, is_active = :active, image_url = :image WHERE id = :id'
         );
-        $upd->execute([':name' => $name, ':desc' => $description, ':price' => $price, ':active' => $isActive, ':id' => $id]);
+        $upd->execute([':name' => $name, ':desc' => $description, ':price' => $price, ':active' => $isActive, ':image' => $imageUrl, ':id' => $id]);
 
         Audit::log($payload['id'], $payload['role'], 'Updated service', 'services', $id);
         Response::success([], 'Service updated.');

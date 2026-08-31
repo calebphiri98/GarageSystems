@@ -6,11 +6,6 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class InventoryController
 {
-    /**
-     * Public: anyone (including guests, for the homepage shop window) can browse parts.
-     * Low-stock/exact-quantity detail is only meaningful internally, but showing
-     * "in stock" vs "out of stock" to a guest is fine and helps them decide to order.
-     */
     public static function list(): void
     {
         $db = Database::connect();
@@ -33,6 +28,7 @@ class InventoryController
         $qty = (int) ($body['quantity'] ?? 0);
         $minStock = (int) ($body['min_stock_level'] ?? 5);
         $desc = trim($body['description'] ?? '');
+        $imageUrl = trim($body['image_url'] ?? '');
 
         if (!$name || !$sku || $price === null) {
             Response::error('Name, SKU and unit price are required.');
@@ -41,12 +37,13 @@ class InventoryController
         $db = Database::connect();
         try {
             $stmt = $db->prepare(
-                'INSERT INTO parts (name, sku, description, unit_price, quantity, min_stock_level)
-                 VALUES (:name, :sku, :desc, :price, :qty, :min) RETURNING id'
+                'INSERT INTO parts (name, sku, description, unit_price, quantity, min_stock_level, image_url)
+                 VALUES (:name, :sku, :desc, :price, :qty, :min, :image) RETURNING id'
             );
             $stmt->execute([
                 ':name' => $name, ':sku' => $sku, ':desc' => $desc ?: null,
                 ':price' => $price, ':qty' => $qty, ':min' => $minStock,
+                ':image' => $imageUrl ?: null,
             ]);
             $id = $stmt->fetch()['id'];
         } catch (PDOException $e) {
@@ -62,7 +59,6 @@ class InventoryController
         Response::success(['id' => $id], 'Part added to inventory.', 201);
     }
 
-    /** Stock received from a supplier. */
     public static function stockIn(int $id, array $body): void
     {
         $payload = require_auth();
@@ -77,7 +73,7 @@ class InventoryController
         $db->beginTransaction();
         $upd = $db->prepare('UPDATE parts SET quantity = quantity + :qty WHERE id = :id');
         $upd->execute([':qty' => $qty, ':id' => $id]);
-        $mv = $db->prepare("INSERT INTO stock_movements (part_id, type, quantity, reason, created_by) VALUES (:pid, 'in', :qty, :reason, :uid)");
+        $mv = $db->prepare("INSERT INTO stock_movements (part_id, type, quantity, reason, created_by) VALUES (:pid, 'in',:qty, :reason, :uid)");
         $mv->execute([':pid' => $id, ':qty' => $qty, ':reason' => $body['reason'] ?? 'Stock received', ':uid' => $payload['id']]);
         $db->commit();
 
@@ -85,13 +81,12 @@ class InventoryController
         Response::success([], 'Stock updated.');
     }
 
-    /** Manual adjustment - requires a reason (business rule). */
     public static function adjust(int $id, array $body): void
     {
         $payload = require_auth();
         require_role($payload, ['admin', 'manager']);
 
-        $qty = (int) ($body['quantity'] ?? 0); // can be negative
+        $qty = (int) ($body['quantity'] ?? 0);
         $reason = trim($body['reason'] ?? '');
         if ($qty === 0 || !$reason) {
             Response::error('A non-zero quantity and a reason are required for a manual adjustment.');
@@ -115,7 +110,7 @@ class InventoryController
         $mv->execute([':pid' => $id, ':qty' => $qty, ':reason' => $reason, ':uid' => $payload['id']]);
         $db->commit();
 
-        Audit::log($payload['id'], $payload['role'], 'Manual stock adjustment', 'parts', $id, null, ['quantity_change' => $qty, 'reason' => $reason]);
+        Audit::log($payload['id'], $payload['role'], 'Manual stock adjustment', 'parts', $id, null, ['quantity_change' =>$qty, 'reason' => $reason]);
         Response::success([], 'Stock adjusted.');
     }
 

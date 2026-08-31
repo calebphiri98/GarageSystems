@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../../../api/api';
 import './Orders.css';
 
@@ -64,11 +64,18 @@ export default function Orders() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Part</th><th>Price</th><th>Available</th><th>Quantity</th></tr>
+            <tr><th>Image</th><th>Part</th><th>Price</th><th>Available</th><th>Quantity</th></tr>
           </thead>
           <tbody>
             {parts.map((p) => (
               <tr key={p.id}>
+                <td>
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+                  ) : (
+                    <div style={{ width: 48, height: 48, borderRadius: 6, background: '#f1f1f1' }} />
+                  )}
+                </td>
                 <td>{p.name}</td>
                 <td>MK {Number(p.unit_price).toLocaleString()}</td>
                 <td>{p.quantity > 0 ? p.quantity : <span className="badge badge-danger">Out of stock</span>}</td>

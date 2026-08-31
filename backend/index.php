@@ -98,6 +98,13 @@ try {
             };
             break;
 
+        case 'cloudinary':
+            match (true) {
+                $action === 'sign' && $method === 'GET' => CloudinaryController::sign(),
+                default => Response::error('Route not found.', 404),
+            };
+            break;
+
         case 'services':
             match (true) {
                 $method === 'GET' && $id === null => ServiceController::list(),
@@ -154,3 +161,4 @@ try {
 } catch (Throwable $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
+

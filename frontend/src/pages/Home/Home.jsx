@@ -15,8 +15,20 @@ export default function Home() {
       api.get('/services').catch(() => ({ data: { data: [] } })),
       api.get('/inventory').catch(() => ({ data: { data: [] } })),
     ]).then(([servicesRes, partsRes]) => {
-      setServices(servicesRes.data.data);
-      setParts(partsRes.data.data.slice(0, 8)); // show a preview, not the full catalog
+      const servicesData = Array.isArray(servicesRes.data?.data)
+        ? servicesRes.data.data
+        : Array.isArray(servicesRes.data)
+          ? servicesRes.data
+          : [];
+
+      const partsData = Array.isArray(partsRes.data?.data)
+        ? partsRes.data.data
+        : Array.isArray(partsRes.data)
+          ? partsRes.data
+          : [];
+
+      setServices(servicesData);
+      setParts(partsData.slice(0, 8)); // show a preview, not the full catalog
       setLoading(false);
     });
   }, []);
@@ -58,6 +70,11 @@ export default function Home() {
             <div className="catalog-grid">
               {services.map((s) => (
                 <div key={s.id} className="catalog-card">
+                  {s.image_url ? (
+                    <img className="catalog-img" src={s.image_url} alt={s.name} />
+                  ) : (
+                    <div className="catalog-img catalog-img-placeholder" />
+                  )}
                   <h3>{s.name}</h3>
                   {s.description && <p className="catalog-desc">{s.description}</p>}
                   {s.estimated_price && (
@@ -89,6 +106,11 @@ export default function Home() {
             <div className="catalog-grid">
               {parts.map((p) => (
                 <div key={p.id} className="catalog-card">
+                  {p.image_url ? (
+                    <img className="catalog-img" src={p.image_url} alt={p.name} />
+                  ) : (
+                    <div className="catalog-img catalog-img-placeholder" />
+                  )}
                   <h3>{p.name}</h3>
                   <div className="catalog-price">MK {Number(p.unit_price).toLocaleString()}</div>
                   <span className={`badge ${p.quantity > 0 ? 'badge-success' : 'badge-danger'}`}>

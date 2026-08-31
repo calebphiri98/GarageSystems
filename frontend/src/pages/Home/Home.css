@@ -133,3 +133,17 @@
   .hero-inner h1 { font-size: 1.5rem; }
   .home-section { padding: 32px 18px; }
 }
+
+
+.catalog-img {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin: -18px -18px 4px -18px;
+  width: calc(100% + 36px);
+}
+
+.catalog-img-placeholder {
+  background: var(--color-border);
+}

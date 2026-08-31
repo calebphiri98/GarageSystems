@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import api from '../../../api/api';
+import { uploadImage } from '../../../api/cloudinary';
 import './Inventory.css';
 
 export default function Inventory() {
   const [parts, setParts] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [stockModal, setStockModal] = useState(null); // { part, mode: 'in'|'adjust' }
-  const [form, setForm] = useState({ name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5' });
+  const [stockModal, setStockModal] = useState(null);
+  const [form, setForm] = useState({ name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5', image_url: '' });
   const [stockForm, setStockForm] = useState({ quantity: '', reason: '' });
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   function load() {
@@ -16,13 +18,28 @@ export default function Inventory() {
 
   useEffect(load, []);
 
+  async function handleImageChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    setError('');
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setForm((f) => ({ ...f, image_url: url }));
+    } catch (err) {
+      setError(err.message || 'Image upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleAdd(e) {
     e.preventDefault();
     setError('');
     try {
       await api.post('/inventory', form);
       setShowAdd(false);
-      setForm({ name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5' });
+      setForm({ name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5', image_url: '' });
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Could not add part.');
@@ -61,11 +78,18 @@ export default function Inventory() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Part</th><th>SKU</th><th>Price</th><th>Stock</th><th>Min level</th><th></th></tr>
+            <tr><th>Image</th><th>Part</th><th>SKU</th><th>Price</th><th>Stock</th><th>Min level</th><th></th></tr>
           </thead>
           <tbody>
             {parts.map((p) => (
               <tr key={p.id}>
+                <td>
+                  {p.image_url ? (
+                    <img src={p.image_url} alt={p.name} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }} />
+                  ) : (
+                    <div style={{ width: 44, height: 44, borderRadius: 6, background: '#f1f1f1' }} />
+                  )}
+                </td>
                 <td>{p.name}</td>
                 <td>{p.sku}</td>
                 <td>MK {Number(p.unit_price).toLocaleString()}</td>
@@ -75,7 +99,7 @@ export default function Inventory() {
                 </td>
                 <td>{p.min_stock_level}</td>
                 <td className="action-cell">
-                  <button className="btn btn-outline btn-sm" onClick={() => setStockModal({ part: p, mode: 'in' })}>Stock In</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => setStockModal({ part: p, mode: 'in' })}>StockIn</button>
                   <button className="btn btn-outline btn-sm" onClick={() => setStockModal({ part: p, mode: 'adjust' })}>Adjust</button>
                 </td>
               </tr>
@@ -99,9 +123,17 @@ export default function Inventory() {
                 <div className="form-group"><label>Initial quantity</label><input type="number" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} /></div>
               </div>
               <div className="form-group"><label>Minimum stock level (for low-stock alerts)</label><input type="number" value={form.min_stock_level} onChange={(e) => setForm((f) => ({ ...f, min_stock_level: e.target.value }))} /></div>
+              <div className="form-group">
+                <label>Photo</label>
+                <input type="file" accept="image/*" onChange={handleImageChange} />
+                {uploading && <p style={{ fontSize: '0.85rem', marginTop: 4 }}>Uploading…</p>}
+                {form.image_url && !uploading && (
+                  <img src={form.image_url} alt="Preview" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, marginTop: 8 }} />
+                )}
+              </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Add Part</button>
+                <button type="submit" className="btn btn-primary" disabled={uploading}>Add Part</button>
               </div>
             </form>
           </div>
