@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment files (never commit real credentials)
+.env
+
+# Build output
+dist/
+build/
+
+# Editor/OS junk
+.vscode/
+.DS_Store
+Thumbs.db
