@@ -1,0 +1,41 @@
+.job-detail-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.job-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-title {
+  font-size: 1rem;
+  color: var(--color-navy);
+  margin: 0 0 14px;
+}
+
+.hint-text {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  margin-top: -6px;
+  margin-bottom: 16px;
+}
+
+.approval-list {
+  margin: 16px 0 0;
+  padding-left: 0;
+  list-style: none;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .job-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
