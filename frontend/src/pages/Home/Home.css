@@ -1,0 +1,135 @@
+.home-page {
+  background: var(--color-bg);
+  min-height: 100vh;
+}
+
+.hero {
+  background: linear-gradient(160deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+  color: #fff;
+  padding: 60px 24px;
+}
+
+.hero-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.hero-inner h1 {
+  font-size: 2rem;
+  margin: 0 0 14px;
+  line-height: 1.25;
+}
+
+.hero-inner p {
+  color: rgba(255,255,255,0.8);
+  font-size: 1rem;
+  margin: 0 0 28px;
+  line-height: 1.5;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero-outline {
+  background: transparent;
+  border-color: rgba(255,255,255,0.4);
+  color: #fff;
+}
+.hero-outline:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+.home-section {
+  padding: 48px 24px;
+}
+
+.home-section-alt {
+  background: var(--color-surface);
+}
+
+.home-section-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.home-section-inner h2 {
+  font-size: 1.4rem;
+  color: var(--color-navy);
+  margin: 0 0 6px;
+}
+
+.section-sub {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+}
+
+.muted-text {
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.catalog-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-section-alt .catalog-card {
+  background: var(--color-bg);
+}
+
+.catalog-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-navy);
+}
+
+.catalog-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  flex-grow: 1;
+}
+
+.catalog-price {
+  font-weight: 700;
+  color: var(--color-primary);
+  font-size: 0.95rem;
+}
+
+.see-more-wrap {
+  text-align: center;
+  margin-top: 28px;
+}
+
+.home-footer {
+  text-align: center;
+  padding: 24px;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 600px) {
+  .hero { padding: 44px 18px; }
+  .hero-inner h1 { font-size: 1.5rem; }
+  .home-section { padding: 32px 18px; }
+}

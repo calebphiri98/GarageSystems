@@ -6,9 +6,13 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class InventoryController
 {
+    /**
+     * Public: anyone (including guests, for the homepage shop window) can browse parts.
+     * Low-stock/exact-quantity detail is only meaningful internally, but showing
+     * "in stock" vs "out of stock" to a guest is fine and helps them decide to order.
+     */
     public static function list(): void
     {
-        require_auth(); // any logged-in role may view parts (customers browse for ordering)
         $db = Database::connect();
         $stmt = $db->query('SELECT * FROM parts ORDER BY name');
         $parts = $stmt->fetchAll();

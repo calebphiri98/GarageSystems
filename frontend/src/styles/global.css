@@ -219,6 +219,7 @@ tr:last-child td { border-bottom: none; }
 }
 .alert-error { background: var(--color-danger-bg); color: var(--color-primary-dark); }
 .alert-success { background: var(--color-success-bg); color: var(--color-success); }
+.alert-info { background: var(--color-info-bg); color: var(--color-info); }
 
 .empty-state {
   text-align: center;

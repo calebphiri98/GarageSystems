@@ -3,6 +3,7 @@ import { AuthProvider, useAuth, dashboardPathForRole } from './context/AuthConte
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout/DashboardLayout';
 
+import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import Register from './pages/Register/Register';
 
@@ -30,10 +31,15 @@ import ManagerReports from './pages/manager/Reports/Reports';
 import MechanicDashboard from './pages/mechanic/Dashboard/Dashboard';
 import MechanicJobDetail from './pages/mechanic/JobDetail/JobDetail';
 
-function HomeRedirect() {
+/**
+ * The "/" route is the public front door: guests see the browsable
+ * homepage (services + parts), while anyone already logged in is
+ * sent straight to their own dashboard instead.
+ */
+function RootRoute() {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  return <Navigate to={dashboardPathForRole(user.role)} replace />;
+  if (user) return <Navigate to={dashboardPathForRole(user.role)} replace />;
+  return <Home />;
 }
 
 export default function App() {
@@ -41,7 +47,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/" element={<HomeRedirect />} />
+          <Route path="/" element={<RootRoute />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 

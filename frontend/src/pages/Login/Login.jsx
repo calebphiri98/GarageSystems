@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, dashboardPathForRole } from '../../context/AuthContext';
 import './Login.css';
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectMessage = location.state?.message;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,12 +30,17 @@ export default function Login() {
   return (
     <div className="auth-screen">
       <div className="auth-card">
+        <Link to="/" className="auth-back-home">
+          ← Back to home
+        </Link>
+
         <div className="auth-brand">
           <span className="auth-brand-badge">UG</span>
           <h1>Uptown Garage</h1>
         </div>
         <p className="auth-subtitle">Sign in to continue. You'll be taken to your dashboard automatically.</p>
 
+        {redirectMessage && <div className="alert alert-info">{redirectMessage}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
         <form onSubmit={handleSubmit}>

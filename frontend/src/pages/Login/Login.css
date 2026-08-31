@@ -68,3 +68,19 @@
 @media (max-width: 480px) {
   .auth-card { padding: 28px 20px; }
 }
+
+.auth-back-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-bottom: 18px;
+  transition: color 0.15s ease;
+}
+
+.auth-back-home:hover {
+  color: var(--color-primary);
+}

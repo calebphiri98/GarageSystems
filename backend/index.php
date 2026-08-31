@@ -98,6 +98,15 @@ try {
             };
             break;
 
+        case 'services':
+            match (true) {
+                $method === 'GET' && $id === null => ServiceController::list(),
+                $method === 'POST' && $id === null => ServiceController::create($body),
+                $method === 'PUT' && $id !== null => ServiceController::update($id, $body),
+                default => Response::error('Route not found.', 404),
+            };
+            break;
+
         case 'orders':
             match (true) {
                 $method === 'POST' && $id === null => OrderController::create($body),
