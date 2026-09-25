@@ -1,9 +1,5 @@
 import { Link } from 'react-router-dom';
 import './PublicNavbar.css';
-
-// Replace this import with your own logo file, e.g.:
-// import logo from '../../assets/logo.png';
-// import logo from '../../assets/logo.png';
 import logo from '../../assets/logo.jpeg'
 
 export default function PublicNavbar() {
