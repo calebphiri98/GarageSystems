@@ -118,7 +118,7 @@ export default function Login() {
           <div className="form-group">
             <label htmlFor="login-email">Email address</label>
 
-            <div className="input-wrapper">
+            <div className={`input-wrapper${loading ? ' input-wrapper-disabled' : ''}`}>
               <span className="input-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="5" width="18" height="14" rx="2" />
@@ -143,7 +143,7 @@ export default function Login() {
           <div className="form-group">
             <label htmlFor="login-password">Password</label>
 
-            <div className="input-wrapper">
+            <div className={`input-wrapper${loading ? ' input-wrapper-disabled' : ''}`}>
               <span className="input-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="4" y="10" width="16" height="10" rx="2" />
