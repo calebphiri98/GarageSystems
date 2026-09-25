@@ -1,0 +1,41 @@
+.job-modal {
+  max-width: 520px;
+}
+
+.job-detail-line {
+  font-size: 0.9rem;
+  margin: 6px 0;
+}
+
+.approval-box {
+  margin-top: 16px;
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+}
+
+.approval-box h3 {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  color: var(--color-warning);
+}
+
+.approval-item {
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+
+.approval-cost {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}

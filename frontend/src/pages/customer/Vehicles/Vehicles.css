@@ -1,0 +1,33 @@
+.vehicle-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.vehicle-card {
+  border-left: 4px solid var(--color-primary);
+}
+
+.vehicle-plate {
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: var(--color-navy);
+  font-size: 1.1rem;
+}
+
+.vehicle-name {
+  color: var(--color-text-muted);
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.vehicle-vin {
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
