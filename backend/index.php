@@ -2,7 +2,6 @@
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/env.php';
 
-// Load all controllers
 foreach (glob(__DIR__ . '/controllers/*.php') as $file) {
     require_once $file;
 }
@@ -10,7 +9,6 @@ foreach (glob(__DIR__ . '/controllers/*.php') as $file) {
 header('Content-Type: application/json');
 require_once __DIR__ . '/helpers/Response.php';
 
-// Parse the path after index.php, e.g. /api/jobs/12/assign -> ['jobs','12','assign']
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $path = trim(substr($uri, strlen($scriptDir)), '/');
@@ -20,7 +18,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 $rawBody = file_get_contents('php://input');
 $body = json_decode($rawBody, true) ?: [];
 
-// route: [segment0] [segment1(id?)] [segment2(action?)]
 $resource = $segments[0] ?? '';
 $id = isset($segments[1]) && is_numeric($segments[1]) ? (int) $segments[1] : null;
 $action = $id !== null ? ($segments[2] ?? null) : ($segments[1] ?? null);
@@ -33,6 +30,7 @@ try {
                 $action === 'login' && $method === 'POST' => AuthController::login($body),
                 $action === 'add-staff' && $method === 'POST' => AuthController::addStaff($body),
                 $action === 'me' && $method === 'GET' => AuthController::me(),
+
                 default => Response::error('Route not found.', 404),
             };
             break;
@@ -65,6 +63,7 @@ try {
                 $method === 'POST' && $action === 'convert' && $id => AppointmentController::convertToJob($id),
                 default => Response::error('Route not found.', 404),
             };
+
             break;
 
         case 'jobs':
@@ -97,6 +96,7 @@ try {
                 $method === 'POST' && $action === 'stock-in' && $id => InventoryController::stockIn($id, $body),
                 $method === 'POST' && $action === 'adjust' && $id => InventoryController::adjust($id, $body),
                 default => Response::error('Route not found.', 404),
+
             };
             break;
 
@@ -129,6 +129,7 @@ try {
             break;
 
         case 'invoices':
+
             match (true) {
                 $method === 'GET' && $id === null => InvoiceController::list(),
                 $method === 'POST' && $action === 'from-job' && $id => InvoiceController::createFromJob($id, $body),
@@ -151,6 +152,8 @@ try {
             match (true) {
                 $action === 'summary' && $method === 'GET' => ReportController::summary(),
                 $action === 'audit-log' && $method === 'GET' => ReportController::auditLog(),
+                $action === 'audit-log' && $method === 'DELETE' => ReportController::clearAuditLog(),
+                $action === 'audit-log-count' && $method === 'GET' => ReportController::countAuditLog(),
                 default => Response::error('Route not found.', 404),
             };
             break;
@@ -159,10 +162,10 @@ try {
             Response::success(['status' => 'Uptown Garage API is running']);
             break;
 
+
         default:
             Response::error('Route not found.', 404);
     }
 } catch (Throwable $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
-
