@@ -18,6 +18,7 @@ const LINKS = {
     { to: '/admin/inventory', label: 'Inventory' },
     { to: '/admin/orders', label: 'Parts Orders' },
     { to: '/admin/invoices', label: 'Invoices & Payments' },
+    { to: '/admin/audit-log', label: 'Audit Log' },
   ],
   manager: [
     { to: '/manager', label: 'Dashboard', end: true },
@@ -29,6 +30,7 @@ const LINKS = {
     { to: '/mechanic', label: 'My Jobs', end: true },
   ],
 };
+
 
 export default function Sidebar({ role }) {
   const links = LINKS[role] || [];
