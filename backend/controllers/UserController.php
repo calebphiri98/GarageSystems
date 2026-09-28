@@ -6,8 +6,6 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class UserController
 {
-    /** List staff (admin/manager/mechanic) - used to populate "assign mechanic" dropdowns etc.
-     *  Supports an optional ?search= filter matched against name/email/role. */
     public static function listStaff(): void
     {
         $payload = require_auth();
@@ -33,6 +31,7 @@ class UserController
         $payload = require_auth();
         require_role($payload, ['admin', 'manager']);
 
+
         $db = Database::connect();
         $stmt = $db->query(
             "SELECT id, name, specialty, is_active FROM users WHERE role = 'mechanic' AND is_active = TRUE ORDER BY name"
@@ -40,8 +39,6 @@ class UserController
         Response::success($stmt->fetchAll());
     }
 
-    /** Supports an optional ?search= filter matched against name/email, and
-     *  now also reports is_active so the manager can reactivate an account. */
     public static function listCustomers(): void
     {
         $payload = require_auth();
@@ -61,36 +58,47 @@ class UserController
         Response::success($stmt->fetchAll());
     }
 
-    /** Activate / deactivate a staff account. */
     public static function toggleActive(int $id): void
     {
         $payload = require_auth();
         require_role($payload, ['admin', 'manager']);
 
+
+        if ($id === $payload['id']) {
+            Response::error('You cannot deactivate your own account.', 422);
+        }
+
         $db = Database::connect();
-        $stmt = $db->prepare('SELECT id, is_active, role FROM users WHERE id = :id');
+        $stmt = $db->prepare('SELECT id, name, is_active, role FROM users WHERE id = :id');
         $stmt->execute([':id' => $id]);
         $user = $stmt->fetch();
         if (!$user) {
             Response::error('User not found.', 404);
         }
 
+        if (in_array($user['role'], ['admin', 'manager'], true) && $payload['role'] !== 'manager') {
+            Response::error('Only a manager can deactivate or reactivate an admin or manager account.', 403);
+        }
+
         $newStatus = !$user['is_active'];
         $upd = $db->prepare('UPDATE users SET is_active = :status WHERE id = :id');
-        $upd->execute([':status' => $newStatus, ':id' => $id]);
+        $upd->execute([':status' => $newStatus ? 'true' : 'false', ':id' => $id]);
 
-        Audit::log($payload['id'], $payload['role'], 'Toggled user active status', 'users', $id, ['is_active' => $user['is_active']], ['is_active' => $newStatus]);
+        $verb = $newStatus ? 'Reactivated' : 'Deactivated';
+        Audit::log(
+            $payload['id'],
+            $payload['role'],
+            "$verb {$user['role']} account: {$user['name']}",
+            'users',
+            $id,
+            ['is_active' => $user['is_active']],
+            ['is_active' => $newStatus]
+        );
 
-        Response::success(['is_active' => $newStatus], 'User status updated.');
+        Response::success(['is_active' => $newStatus], "Account {$verb}.");
+
     }
 
-    /**
-     * Permanently delete a user account. Only a manager may delete an
-     * admin/manager account; admin or manager may delete a mechanic or
-     * customer. Blocked if the user still has related records elsewhere
-     * (jobs, appointments, orders, invoices) so history is never orphaned -
-     * deactivate instead in that case.
-     */
     public static function delete(int $id): void
     {
         $payload = require_auth();
@@ -121,6 +129,7 @@ class UserController
             'invoices' => 'SELECT COUNT(*) FROM invoices WHERE customer_id = :id',
         ];
         foreach ($checks as $label => $sql) {
+
             $c = $db->prepare($sql);
             $c->execute([':id' => $id]);
             if ((int) $c->fetchColumn() > 0) {
@@ -133,7 +142,6 @@ class UserController
 
         $db->beginTransaction();
         try {
-            // Non-critical references that are safe to clear rather than block on.
             $db->prepare('DELETE FROM notifications WHERE user_id = :id')->execute([':id' => $id]);
             $db->prepare('UPDATE audit_logs SET user_id = NULL WHERE user_id = :id')->execute([':id' => $id]);
             $db->prepare('UPDATE stock_movements SET created_by = NULL WHERE created_by = :id')->execute([':id' => $id]);
@@ -143,8 +151,9 @@ class UserController
             $db->commit();
         } catch (PDOException $e) {
             $db->rollBack();
+            error_log('User delete failed for id ' . $id . ': ' . $e->getMessage());
             Response::error(
-                "Cannot delete {$user['name']}: this account is still referenced elsewhere in the system's records (e.g. as the staff member who confirmed, verified or recorded something). Deactivate the account instead to preserve history.",
+                "Cannot delete {$user['name']}: this account is still referenced elsewhere in the system's records. Deactivate the account instead to preserve history.",
                 422
             );
         }
