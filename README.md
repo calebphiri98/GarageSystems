@@ -2,8 +2,8 @@
 # Current in the deployment phase 
 
 # Customer Part
-# Order Cancellation
-# Drop down for an air filter to specify the kind you want
+# Order Cancellation is not working
+# Drop down for items to clearly choose what a customer would want e.g tyre,  an air filter to specify the kind you want
 # Search based on product id e.g. filter number , batteries alomst for every material
 
 
@@ -15,3 +15,4 @@
 # drop down to update status
 # stock update
 # order update in the admin page
+# confirmation is not working, cancelling as awell is not working

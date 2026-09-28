@@ -6,54 +6,58 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class InventoryController
 {
-    /**
-     * List parts. Supports optional query-string filters, used by both the
-     * public catalog and the admin inventory / customer ordering pages:
-     *   ?search=      matches name, sku or description
-     *   ?min_price=   minimum unit price
-     *   ?max_price=   maximum unit price
-     *   ?in_stock=1   only parts with quantity > 0
-     *   ?low_stock=1  only parts at/under their minimum stock level
-     */
     public static function list(): void
     {
         $db = Database::connect();
 
         $search = trim($_GET['search'] ?? '');
+        $category = trim($_GET['category'] ?? '');
         $minPrice = $_GET['min_price'] ?? '';
         $maxPrice = $_GET['max_price'] ?? '';
         $inStock = isset($_GET['in_stock']) && $_GET['in_stock'] !== '0' && $_GET['in_stock'] !== '';
         $lowStockOnly = isset($_GET['low_stock']) && $_GET['low_stock'] !== '0' && $_GET['low_stock'] !== '';
 
-        $sql = 'SELECT * FROM parts WHERE 1=1';
+        $sql = 'SELECT id, name, sku, description, unit_price, quantity, min_stock_level, image_url, category, created_at FROM parts WHERE 1=1';
         $params = [];
 
         if ($search !== '') {
             $sql .= ' AND (LOWER(name) LIKE :search OR LOWER(sku) LIKE :search OR LOWER(COALESCE(description, \'\')) LIKE :search)';
             $params[':search'] = '%' . strtolower($search) . '%';
         }
+
+        if ($category !== '') {
+            $sql .= ' AND LOWER(category) = LOWER(:category)';
+            $params[':category'] = $category;
+        }
+
         if (is_numeric($minPrice)) {
             $sql .= ' AND unit_price >= :min_price';
             $params[':min_price'] = $minPrice;
         }
+
         if (is_numeric($maxPrice)) {
             $sql .= ' AND unit_price <= :max_price';
             $params[':max_price'] = $maxPrice;
         }
+
         if ($inStock) {
             $sql .= ' AND quantity > 0';
         }
+
         if ($lowStockOnly) {
             $sql .= ' AND quantity <= min_stock_level';
         }
+
         $sql .= ' ORDER BY name';
 
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $parts = $stmt->fetchAll();
+
         foreach ($parts as &$p) {
             $p['low_stock'] = $p['quantity'] <= $p['min_stock_level'];
         }
+
         Response::success($parts);
     }
 
@@ -69,22 +73,31 @@ class InventoryController
         $minStock = (int) ($body['min_stock_level'] ?? 5);
         $desc = trim($body['description'] ?? '');
         $imageUrl = trim($body['image_url'] ?? '');
+        $category = trim($body['category'] ?? '');
 
         if (!$name || !$sku || $price === null) {
             Response::error('Name, SKU and unit price are required.');
         }
 
         $db = Database::connect();
+
         try {
             $stmt = $db->prepare(
-                'INSERT INTO parts (name, sku, description, unit_price, quantity, min_stock_level, image_url)
-                 VALUES (:name, :sku, :desc, :price, :qty, :min, :image) RETURNING id'
+                'INSERT INTO parts (name, sku, description, unit_price, quantity, min_stock_level, image_url, category)
+                 VALUES (:name, :sku, :desc, :price, :qty, :min, :image, :category) RETURNING id'
             );
+
             $stmt->execute([
-                ':name' => $name, ':sku' => $sku, ':desc' => $desc ?: null,
-                ':price' => $price, ':qty' => $qty, ':min' => $minStock,
+                ':name' => $name,
+                ':sku' => $sku,
+                ':desc' => $desc ?: null,
+                ':price' => $price,
+                ':qty' => $qty,
+                ':min' => $minStock,
                 ':image' => $imageUrl ?: null,
+                ':category' => $category ?: null,
             ]);
+
             $id = $stmt->fetch()['id'];
         } catch (PDOException $e) {
             Response::error('A part with that SKU already exists.', 409);
@@ -92,7 +105,11 @@ class InventoryController
 
         if ($qty > 0) {
             $mv = $db->prepare("INSERT INTO stock_movements (part_id, type, quantity, reason, created_by) VALUES (:pid, 'in', :qty, 'Initial stock', :uid)");
-            $mv->execute([':pid' => $id, ':qty' => $qty, ':uid' => $payload['id']]);
+            $mv->execute([
+                ':pid' => $id,
+                ':qty' => $qty,
+                ':uid' => $payload['id']
+            ]);
         }
 
         Audit::log($payload['id'], $payload['role'], 'Added new part', 'parts', $id);
@@ -105,19 +122,34 @@ class InventoryController
         require_role($payload, ['admin', 'manager']);
 
         $qty = (int) ($body['quantity'] ?? 0);
+
         if ($qty <= 0) {
             Response::error('Quantity must be greater than zero.');
         }
 
         $db = Database::connect();
         $db->beginTransaction();
+
         $upd = $db->prepare('UPDATE parts SET quantity = quantity + :qty WHERE id = :id');
-        $upd->execute([':qty' => $qty, ':id' => $id]);
-        $mv = $db->prepare("INSERT INTO stock_movements (part_id, type, quantity, reason, created_by) VALUES (:pid, 'in',:qty, :reason, :uid)");
-        $mv->execute([':pid' => $id, ':qty' => $qty, ':reason' => $body['reason'] ?? 'Stock received', ':uid' => $payload['id']]);
+        $upd->execute([
+            ':qty' => $qty,
+            ':id' => $id
+        ]);
+
+        $mv = $db->prepare("INSERT INTO stock_movements (part_id, type, quantity, reason, created_by) VALUES (:pid, 'in', :qty, :reason, :uid)");
+        $mv->execute([
+            ':pid' => $id,
+            ':qty' => $qty,
+            ':reason' => $body['reason'] ?? 'Stock received',
+            ':uid' => $payload['id']
+        ]);
+
         $db->commit();
 
-        Audit::log($payload['id'], $payload['role'], 'Stock received', 'parts', $id, null, ['quantity_added' => $qty]);
+        Audit::log($payload['id'], $payload['role'], 'Stock received', 'parts', $id, null, [
+            'quantity_added' => $qty
+        ]);
+
         Response::success([], 'Stock updated.');
     }
 
@@ -128,29 +160,49 @@ class InventoryController
 
         $qty = (int) ($body['quantity'] ?? 0);
         $reason = trim($body['reason'] ?? '');
+
         if ($qty === 0 || !$reason) {
             Response::error('A non-zero quantity and a reason are required for a manual adjustment.');
         }
 
         $db = Database::connect();
+
         $part = $db->prepare('SELECT quantity FROM parts WHERE id = :id');
         $part->execute([':id' => $id]);
+
         $row = $part->fetch();
+
         if (!$row) {
             Response::error('Part not found.', 404);
         }
+
         if ($row['quantity'] + $qty < 0) {
             Response::error('Adjustment would result in negative stock.', 422);
         }
 
         $db->beginTransaction();
+
         $upd = $db->prepare('UPDATE parts SET quantity = quantity + :qty WHERE id = :id');
-        $upd->execute([':qty' => $qty, ':id' => $id]);
+        $upd->execute([
+            ':qty' => $qty,
+            ':id' => $id
+        ]);
+
         $mv = $db->prepare("INSERT INTO stock_movements (part_id, type, quantity, reason, created_by) VALUES (:pid, 'adjustment', :qty, :reason, :uid)");
-        $mv->execute([':pid' => $id, ':qty' => $qty, ':reason' => $reason, ':uid' => $payload['id']]);
+        $mv->execute([
+            ':pid' => $id,
+            ':qty' => $qty,
+            ':reason' => $reason,
+            ':uid' => $payload['id']
+        ]);
+
         $db->commit();
 
-        Audit::log($payload['id'], $payload['role'], 'Manual stock adjustment', 'parts', $id, null, ['quantity_change' =>$qty, 'reason' => $reason]);
+        Audit::log($payload['id'], $payload['role'], 'Manual stock adjustment', 'parts', $id, null, [
+            'quantity_change' => $qty,
+            'reason' => $reason
+        ]);
+
         Response::success([], 'Stock adjusted.');
     }
 
@@ -160,7 +212,14 @@ class InventoryController
         require_role($payload, ['admin', 'manager']);
 
         $db = Database::connect();
-        $stmt = $db->query('SELECT * FROM parts WHERE quantity <= min_stock_level ORDER BY quantity ASC');
+
+        $stmt = $db->query(
+            'SELECT id, name, sku, description, unit_price, quantity, min_stock_level, image_url, category, created_at
+             FROM parts
+             WHERE quantity <= min_stock_level
+             ORDER BY quantity ASC'
+        );
+
         Response::success($stmt->fetchAll());
     }
 }

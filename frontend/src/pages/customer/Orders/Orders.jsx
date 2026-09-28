@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../../../api/api';
 import './Orders.css';
 
@@ -11,425 +11,425 @@ const STATUS_BADGE = {
   Completed: 'badge-neutral',
 };
 
-const money = (n) => `MK ${Number(n).toLocaleString()}`;
-
 export default function Orders() {
   const [parts, setParts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [cancellingId, setCancellingId] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
 
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [showPriceFilter, setShowPriceFilter] = useState(false);
 
-  const [selectedId, setSelectedId] = useState('');
-  const [qtyInput, setQtyInput] = useState('1');
+  const loadParts = async () => {
+    try {
+      const params = {};
 
-  function loadParts() {
-    const params = {};
-    if (search.trim()) params.search = search.trim();
-    if (minPrice !== '') params.min_price = minPrice;
-    if (maxPrice !== '') params.max_price = maxPrice;
-    api
-      .get('/inventory', { params })
-      .then((r) => setParts(Array.isArray(r.data?.data) ? r.data.data : []))
-      .catch((err) => setError(err.response?.data?.message || 'Could not load parts: ' + err.message));
-  }
+      if (search.trim()) {
+        params.search = search.trim();
+      }
 
-  function loadOrders() {
-    api
-      .get('/orders')
-      .then((r) => setOrders(Array.isArray(r.data?.data) ? r.data.data : []))
-      .catch((err) => setError(err.response?.data?.message || 'Could not load orders: ' + err.message));
-  }
+      if (category) {
+        params.category = category;
+      }
 
-  function showTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+      if (minPrice !== '') {
+        params.min_price = minPrice;
+      }
+
+      if (maxPrice !== '') {
+        params.max_price = maxPrice;
+      }
+
+      const { data } = await api.get('/inventory', { params });
+      setParts(data?.data || data || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to load parts.');
+    }
+  };
+
+  const loadOrders = async () => {
+    try {
+      const { data } = await api.get('/orders');
+      setOrders(data?.data || data || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to load orders.');
+    }
+  };
 
   useEffect(() => {
     loadOrders();
   }, []);
 
   useEffect(() => {
-    const t = setTimeout(loadParts, 250);
-    return () => clearTimeout(t);
-  }, [search, minPrice, maxPrice]);
+    const timer = setTimeout(() => {
+      loadParts();
+    }, 250);
 
-  const selectedPart = useMemo(
-    () => parts.find((p) => String(p.id) === String(selectedId)) || null,
-    [parts, selectedId]
-  );
+    return () => clearTimeout(timer);
+  }, [search, category, minPrice, maxPrice]);
 
-  const priceRange = useMemo(() => {
-    const prices = parts.filter((p) => p.quantity > 0).map((p) => Number(p.unit_price));
-    if (prices.length === 0) return null;
-    return { min: Math.min(...prices), max: Math.max(...prices) };
-  }, [parts]);
+  const categories = [...new Set(
+    parts
+      .map((part) => part.category?.trim())
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
 
-  const cartTotal = cart.reduce((sum, i) => sum + Number(i.unit_price) * i.quantity, 0);
+  const setQty = (partId, qty, max) => {
+    const value = Math.max(0, Math.min(Number(qty) || 0, max));
 
-  function clearFilters() {
-    setSearch('');
-    setMinPrice('');
-    setMaxPrice('');
-  }
+    setCart((current) => {
+      const next = { ...current };
 
-  function addToOrder() {
-    setError('');
+      if (value === 0) {
+        delete next[partId];
+      } else {
+        next[partId] = value;
+      }
+
+      return next;
+    });
+  };
+
+  const submitOrder = async () => {
+    const items = Object.entries(cart)
+      .map(([partId, quantity]) => ({
+        part_id: Number(partId),
+        quantity: Number(quantity),
+      }))
+      .filter((item) => item.quantity > 0);
+
+    if (!items.length) {
+      setError('Please select at least one part.');
+      return;
+    }
+
     setMessage('');
-    if (!selectedPart) {
-      setError('Select a part first.');
-      return;
-    }
-    const qty = Math.floor(Number(qtyInput));
-    if (!qty || qty <= 0) {
-      setError('Enter a quantity of at least 1.');
-      return;
-    }
-    const existing = cart.find((i) => i.part_id === selectedPart.id);
-    const total = (existing ? existing.quantity : 0) + qty;
-    if (total > selectedPart.quantity) {
-      setError(`Only ${selectedPart.quantity} of ${selectedPart.name} available.`);
-      return;
-    }
-    setCart((c) =>
-      existing
-        ? c.map((i) => (i.part_id === selectedPart.id ? { ...i, quantity: total } : i))
-        : [
-            ...c,
-            {
-              part_id: selectedPart.id,
-              name: selectedPart.name,
-              unit_price: selectedPart.unit_price,
-              quantity: qty,
-            },
-          ]
-    );
-    setSelectedId('');
-    setQtyInput('1');
-  }
-
-  function removeFromOrder(partId) {
-    setCart((c) => c.filter((i) => i.part_id !== partId));
-  }
-
-  function reviewOrder() {
     setError('');
-    setMessage('');
-    if (cart.length === 0) {
-      setError('Add at least one part to your order.');
-      showTop();
-      return;
-    }
-    setShowConfirm(true);
-  }
 
-  async function submitOrder() {
-    setSubmitting(true);
-    setError('');
-    setMessage('');
-    const items = cart.map((i) => ({ part_id: Number(i.part_id), quantity: Number(i.quantity) }));
     try {
       await api.post('/orders', { items });
-      setMessage('Order submitted and pending review.');
-      setCart([]);
-      loadParts();
-      loadOrders();
+      setMessage('Order submitted successfully.');
+      setCart({});
+      await loadOrders();
+      await loadParts();
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not place order.');
-    } finally {
-      setSubmitting(false);
-      setShowConfirm(false);
-      showTop();
+      setError(err?.response?.data?.message || 'Failed to submit order.');
     }
-  }
+  };
 
-  async function cancelOrder(id) {
-    if (!window.confirm('Cancel this order? This cannot be undone.')) return;
-    setError('');
-    setMessage('');
+  const cancelOrder = async (id) => {
     setCancellingId(id);
+    setMessage('');
+    setError('');
+
     try {
-      await api.put(`/orders/${id}/cancel`, {});
-      setMessage('Order cancelled.');
-      loadOrders();
-      loadParts();
+      await api.post(`/orders/${id}/cancel`);
+      setMessage('Order cancelled successfully.');
+      await loadOrders();
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not cancel order.');
+      setError(err?.response?.data?.message || 'Failed to cancel order.');
     } finally {
       setCancellingId(null);
-      showTop();
     }
-  }
+  };
+
+  const clearFilters = () => {
+    setSearch('');
+    setCategory('');
+    setMinPrice('');
+    setMaxPrice('');
+    setShowPriceFilter(false);
+  };
+
+  const hasFilters =
+    search ||
+    category ||
+    minPrice !== '' ||
+    maxPrice !== '';
 
   return (
-    <div className="page">
-      <div className="page-header">
+    <div className="orders-page">
+      <div className="orders-header">
         <div>
-          <h1>Order Parts</h1>
-          <p>Choose a part, check its price and availability, then review your order before submitting.</p>
+          <h1>Parts & Orders</h1>
+          <p>Browse available parts and place an order.</p>
         </div>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
-      {message && <div className="alert alert-success">{message}</div>}
+      {message && <div className="alert success">{message}</div>}
+      {error && <div className="alert error">{error}</div>}
 
-      <div className="filter-bar">
-        <input
-          className="filter-search"
-          type="text"
-          placeholder="Search parts by name, SKU or description..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <input
-          type="number"
-          min={0}
-          placeholder="Min price"
-          value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
-        />
-        <input
-          type="number"
-          min={0}
-          placeholder="Max price"
-          value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
-        />
-        {(search || minPrice !== '' || maxPrice !== '') && (
-          <button type="button" className="btn btn-outline btn-sm" onClick={clearFilters}>Clear</button>
-        )}
-      </div>
-
-      <div className="card" style={{ marginTop: 16 }}>
-        <h2 className="section-title">Select a part</h2>
-
-        <div style={{ display: 'grid', gap: 14, maxWidth: 520 }}>
+      <section className="catalog-section">
+        <div className="section-header">
           <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Part</label>
+            <h2>Available Parts</h2>
+            <p>Select the parts and quantities you need.</p>
+          </div>
+        </div>
+
+        <div className="filter-bar">
+          <input
+            className="filter-search"
+            type="text"
+            placeholder="Search parts by name, SKU or description..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          {categories.length > 0 && (
             <select
-              value={selectedId}
-              onChange={(e) => {
-                setSelectedId(e.target.value);
-                setQtyInput('1');
-              }}
-              style={{ width: '100%' }}
+              className="filter-select"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
             >
-              <option value="">Select a part...</option>
-              {parts.map((p) => (
-                <option key={p.id} value={p.id} disabled={p.quantity === 0}>
-                  {p.name}
-                  {p.quantity === 0 ? ' (out of stock)' : ''}
+              <option value="">All categories</option>
+              {categories.map((item) => (
+                <option key={item} value={item}>
+                  {item}
                 </option>
               ))}
             </select>
-            {parts.length === 0 && (
-              <div className="empty-state" style={{ marginTop: 8 }}>No parts match your filters.</div>
-            )}
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Price</label>
-            {selectedPart ? (
-              <div style={{ fontSize: 20, fontWeight: 700 }}>{money(selectedPart.unit_price)}</div>
-            ) : priceRange ? (
-              <div style={{ fontSize: 16 }}>
-                {priceRange.min === priceRange.max
-                  ? money(priceRange.min)
-                  : `${money(priceRange.min)} to ${money(priceRange.max)}`}
-                <div style={{ fontSize: 13, opacity: 0.7, marginTop: 2 }}>
-                  Select a part to see its exact price.
-                </div>
-              </div>
-            ) : (
-              <div style={{ opacity: 0.7 }}>No priced parts available.</div>
-            )}
-          </div>
-
-          {selectedPart && (
-            <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-              {selectedPart.image_url ? (
-                <img
-                  src={selectedPart.image_url}
-                  alt={selectedPart.name}
-                  style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 8 }}
-                />
-              ) : (
-                <div style={{ width: 72, height: 72, borderRadius: 8, background: '#f1f1f1' }} />
-              )}
-              <div>
-                <div style={{ fontWeight: 600 }}>{selectedPart.name}</div>
-                {selectedPart.sku && <div style={{ fontSize: 13, opacity: 0.7 }}>SKU: {selectedPart.sku}</div>}
-                <div style={{ fontSize: 13, opacity: 0.7 }}>{selectedPart.quantity} available</div>
-              </div>
-            </div>
           )}
 
-          {selectedPart && (
-            <div>
-              <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>Quantity</label>
-              <input
-                type="number"
-                min={1}
-                max={selectedPart.quantity}
-                className="qty-input"
-                value={qtyInput}
-                onChange={(e) => setQtyInput(e.target.value)}
-              />
-              <div style={{ marginTop: 6, fontSize: 14 }}>
-                Line total: <strong>{money(Number(selectedPart.unit_price) * (Number(qtyInput) || 0))}</strong>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <button type="button" className="btn btn-outline" disabled={!selectedPart} onClick={addToOrder}>
-              Add to order
+          <div className="price-filter-wrapper">
+            <button
+              type="button"
+              className={`price-filter-button ${
+                minPrice !== '' || maxPrice !== '' ? 'active' : ''
+              }`}
+              onClick={() => setShowPriceFilter((current) => !current)}
+            >
+              Price
+              {(minPrice !== '' || maxPrice !== '') && ' • Filtered'}
+              <span>▾</span>
             </button>
+
+            {showPriceFilter && (
+              <div className="price-filter-dropdown">
+                <div className="price-filter-title">Price range</div>
+
+                <div className="price-inputs">
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Min price"
+                    value={minPrice}
+                    onChange={(e) => setMinPrice(e.target.value)}
+                  />
+
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Max price"
+                    value={maxPrice}
+                    onChange={(e) => setMaxPrice(e.target.value)}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  className="price-apply-button"
+                  onClick={() => setShowPriceFilter(false)}
+                >
+                  Apply
+                </button>
+              </div>
+            )}
           </div>
+
+          {hasFilters && (
+            <button
+              type="button"
+              className="clear-filter-button"
+              onClick={clearFilters}
+            >
+              Clear
+            </button>
+          )}
         </div>
-      </div>
 
-      <div className="card" style={{ marginTop: 20 }}>
-        <h2 className="section-title">Your order</h2>
-        {cart.length === 0 ? (
-          <div className="empty-state">No parts added yet.</div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Part</th><th>Unit price</th><th>Qty</th><th>Total</th><th></th></tr>
-              </thead>
-              <tbody>
-                {cart.map((i) => (
-                  <tr key={i.part_id}>
-                    <td>{i.name}</td>
-                    <td>{money(i.unit_price)}</td>
-                    <td>{i.quantity}</td>
-                    <td>{money(Number(i.unit_price) * i.quantity)}</td>
-                    <td>
-                      <button className="btn btn-danger btn-sm" onClick={() => removeFromOrder(i.part_id)}>
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+        <div className="parts-table-wrapper">
+          <table className="parts-table">
+            <thead>
+              <tr>
+                <th>Image</th>
+                <th>Part</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th>Quantity</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {parts.length === 0 ? (
                 <tr>
-                  <td colSpan={3} style={{ textAlign: 'right', fontWeight: 600 }}>Order total</td>
-                  <td colSpan={2} style={{ fontWeight: 700 }}>{money(cartTotal)}</td>
+                  <td colSpan="6" className="empty-state">
+                    No parts found.
+                  </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-        <button
-          className="btn btn-primary"
-          style={{ marginTop: 16 }}
-          disabled={cart.length === 0}
-          onClick={reviewOrder}
-        >
-          Review and submit order
-        </button>
-      </div>
-
-      <div className="card" style={{ marginTop: 28 }}>
-        <h2 className="section-title">My orders</h2>
-        {orders.length === 0 ? (
-          <div className="empty-state">You haven't placed any orders yet.</div>
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Order #</th><th>Items</th><th>Status</th><th>Placed</th><th></th></tr></thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id}>
-                    <td>#{o.id}</td>
-                    <td>{o.items?.map((i) => `${i.part_name} x${i.quantity}`).join(', ')}</td>
-                    <td><span className={`badge ${STATUS_BADGE[o.status] || 'badge-neutral'}`}>{o.status}</span></td>
-                    <td>{new Date(o.created_at).toLocaleDateString()}</td>
+              ) : (
+                parts.map((p) => (
+                  <tr key={p.id}>
                     <td>
-                      {o.status === 'Pending' && (
-                        <button
-                          className="btn btn-danger btn-sm"
-                          disabled={cancellingId === o.id}
-                          onClick={() => cancelOrder(o.id)}
-                        >
-                          {cancellingId === o.id ? 'Cancelling...' : 'Cancel'}
-                        </button>
+                      {p.image_url ? (
+                        <img
+                          src={p.image_url}
+                          alt={p.name}
+                          className="part-image"
+                        />
+                      ) : (
+                        <div className="part-image-placeholder">No image</div>
                       )}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      {showConfirm && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              background: '#fff',
-              color: '#222',
-              borderRadius: 10,
-              padding: 24,
-              width: '92%',
-              maxWidth: 520,
-              maxHeight: '85vh',
-              overflowY: 'auto',
-            }}
-          >
-            <h2 style={{ marginTop: 0 }}>Confirm your order</h2>
-            <p style={{ marginTop: 0 }}>Please check that these are the parts and quantities you want.</p>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>Part</th><th>Qty</th><th>Unit price</th><th>Total</th></tr>
-                </thead>
-                <tbody>
-                  {cart.map((i) => (
-                    <tr key={i.part_id}>
-                      <td>{i.name}</td>
-                      <td>{i.quantity}</td>
-                      <td>{money(i.unit_price)}</td>
-                      <td>{money(Number(i.unit_price) * i.quantity)}</td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td colSpan={3} style={{ textAlign: 'right', fontWeight: 600 }}>Order total</td>
-                    <td style={{ fontWeight: 700 }}>{money(cartTotal)}</td>
+                    <td>
+                      <div className="part-name">{p.name}</div>
+                      <div className="part-sku">{p.sku}</div>
+                      {p.description && (
+                        <div className="part-description">
+                          {p.description}
+                        </div>
+                      )}
+                    </td>
+
+                    <td>
+                      {p.category || 'Uncategorized'}
+                    </td>
+
+                    <td>
+                      MK {Number(p.unit_price).toLocaleString()}
+                    </td>
+
+                    <td>
+                      {Number(p.quantity) > 0 ? (
+                        p.quantity
+                      ) : (
+                        <span className="out-of-stock">Out of stock</span>
+                      )}
+                    </td>
+
+                    <td>
+                      <input
+                        type="number"
+                        min="0"
+                        max={Number(p.quantity)}
+                        value={cart[p.id] || ''}
+                        disabled={Number(p.quantity) <= 0}
+                        onChange={(e) =>
+                          setQty(
+                            p.id,
+                            e.target.value,
+                            Number(p.quantity)
+                          )
+                        }
+                        className="quantity-input"
+                      />
+                    </td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
-              <button className="btn btn-outline" disabled={submitting} onClick={() => setShowConfirm(false)}>
-                Go back
-              </button>
-              <button className="btn btn-primary" disabled={submitting} onClick={submitOrder}>
-                {submitting ? 'Placing order...' : 'Yes, place order'}
-              </button>
-            </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="order-actions">
+          <button
+            type="button"
+            className="submit-order-button"
+            onClick={submitOrder}
+          >
+            Submit Order
+          </button>
+        </div>
+      </section>
+
+      <section className="orders-section">
+        <div className="section-header">
+          <div>
+            <h2>My Orders</h2>
+            <p>View and manage your submitted orders.</p>
           </div>
         </div>
-      )}
+
+        {orders.length === 0 ? (
+          <div className="empty-orders">
+            You have not placed any orders yet.
+          </div>
+        ) : (
+          <div className="orders-list">
+            {orders.map((order) => (
+              <div className="order-card" key={order.id}>
+                <div className="order-card-header">
+                  <div>
+                    <strong>Order #{order.id}</strong>
+                    <span>
+                      {order.created_at
+                        ? new Date(order.created_at).toLocaleString()
+                        : ''}
+                    </span>
+                  </div>
+
+                  <span
+                    className={`status-badge ${
+                      STATUS_BADGE[order.status] || 'badge-neutral'
+                    }`}
+                  >
+                    {order.status}
+                  </span>
+                </div>
+
+                {order.items && order.items.length > 0 && (
+                  <div className="order-items">
+                    {order.items.map((item, index) => (
+                      <div className="order-item" key={item.id || index}>
+                        <span>
+                          {item.part_name || item.name}
+                        </span>
+
+                        <span>
+                          {item.quantity} × MK{' '}
+                          {Number(
+                            item.unit_price || item.price || 0
+                          ).toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="order-card-footer">
+                  {order.total_amount !== undefined && (
+                    <strong>
+                      Total: MK{' '}
+                      {Number(order.total_amount).toLocaleString()}
+                    </strong>
+                  )}
+
+                  {(order.status === 'Pending' ||
+                    order.status === 'Confirmed') && (
+                    <button
+                      type="button"
+                      className="cancel-order-button"
+                      disabled={cancellingId === order.id}
+                      onClick={() => cancelOrder(order.id)}
+                    >
+                      {cancellingId === order.id
+                        ? 'Cancelling...'
+                        : 'Cancel Order'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
