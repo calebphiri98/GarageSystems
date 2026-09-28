@@ -6,7 +6,6 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class OrderController
 {
-    /** Customer submits a cart of parts -> order becomes Pending. */
     public static function create(array $body): void
     {
         $payload = require_auth();
@@ -36,7 +35,6 @@ class OrderController
                 if (!$partRow) {
                     throw new Exception('One of the selected parts no longer exists.');
                 }
-                // Rule: a customer cannot order more than what is currently available in stock.
                 if ($qty > (int) $partRow['quantity']) {
                     throw new Exception("Only {$partRow['quantity']} of {$partRow['name']} available - you requested $qty.");
                 }
@@ -53,10 +51,6 @@ class OrderController
         Response::success(['order_id' => $orderId], 'Order submitted and is pending review.', 201);
     }
 
-    /**
-     * Edit a still-Pending order's line items (admin/manager, or the owning
-     * customer). Replaces the item list wholesale, re-validating stock.
-     */
     public static function update(int $id, array $body): void
     {
         $payload = require_auth();
@@ -124,11 +118,6 @@ class OrderController
         Response::success([], 'Order updated.');
     }
 
-    /**
-     * Cancel an order. A customer may cancel their own order only while it
-     * is still Pending. Admin/manager may cancel at any point before it has
-     * been Completed. Confirmed orders release the stock they had reserved.
-     */
     public static function cancel(int $id, array $body): void
     {
         $payload = require_auth();
@@ -155,8 +144,7 @@ class OrderController
 
         $db->beginTransaction();
         try {
-            // If stock was already reserved/deducted (order was Confirmed), give it back.
-            if ($orderRow['status'] === 'Confirmed') {
+            if (in_array($orderRow['status'], ['Confirmed', 'Ready for Collection'], true)) {
                 $items = $db->prepare('SELECT * FROM order_items WHERE order_id = :id');
                 $items->execute([':id' => $id]);
                 foreach ($items->fetchAll() as $row) {
@@ -201,7 +189,6 @@ class OrderController
         Response::success($orders);
     }
 
-    /** Admin confirms or rejects. Rule: cannot confirm more than available stock unless backorder policy applies. */
     public static function review(int $id, array $body): void
     {
         $payload = require_auth();
