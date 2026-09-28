@@ -17,8 +17,8 @@ export default function Orders() {
   const [cart, setCart] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [cancellingId, setCancellingId] = useState(null);
 
-  // Search & price-range filter for the parts catalog.
   const [search, setSearch] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -28,18 +28,30 @@ export default function Orders() {
     if (search.trim()) params.search = search.trim();
     if (minPrice !== '') params.min_price = minPrice;
     if (maxPrice !== '') params.max_price = maxPrice;
-    api.get('/inventory', { params }).then((r) => setParts(r.data.data));
+    api
+      .get('/inventory', { params })
+      .then((r) => setParts(Array.isArray(r.data?.data) ? r.data.data : []))
+      .catch((err) => setError(err.response?.data?.message || 'Could not load parts: ' + err.message));
   }
 
   function loadOrders() {
-    api.get('/orders').then((r) => setOrders(r.data.data));
+    api
+      .get('/orders')
+      .then((r) => setOrders(Array.isArray(r.data?.data) ? r.data.data : []))
+      .catch((err) => setError(err.response?.data?.message || 'Could not load orders: ' + err.message));
   }
 
-  useEffect(loadOrders, []);
+  function showTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   useEffect(() => {
-    const t = setTimeout(loadParts, 250); // debounce while typing
+    loadOrders();
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(loadParts, 250);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, minPrice, maxPrice]);
 
   function clearFilters() {
@@ -48,7 +60,6 @@ export default function Orders() {
     setMaxPrice('');
   }
 
-  // A customer can never key in more than what's currently in stock.
   function setQty(part, rawQty) {
     let qty = Number(rawQty);
     if (Number.isNaN(qty)) qty = '';
@@ -66,6 +77,7 @@ export default function Orders() {
 
     if (items.length === 0) {
       setError('Add a quantity for at least one part.');
+      showTop();
       return;
     }
     try {
@@ -77,18 +89,24 @@ export default function Orders() {
     } catch (err) {
       setError(err.response?.data?.message || 'Could not place order.');
     }
+    showTop();
   }
 
   async function cancelOrder(id) {
     if (!window.confirm('Cancel this order? This cannot be undone.')) return;
     setError('');
     setMessage('');
+    setCancellingId(id);
     try {
       await api.put(`/orders/${id}/cancel`, {});
       setMessage('Order cancelled.');
       loadOrders();
+      loadParts();
     } catch (err) {
       setError(err.response?.data?.message || 'Could not cancel order.');
+    } finally {
+      setCancellingId(null);
+      showTop();
     }
   }
 
@@ -108,7 +126,7 @@ export default function Orders() {
         <input
           className="filter-search"
           type="text"
-          placeholder="Search parts by name, SKU or description…"
+          placeholder="Search parts by name, SKU or description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -186,7 +204,13 @@ export default function Orders() {
                     <td>{new Date(o.created_at).toLocaleDateString()}</td>
                     <td>
                       {o.status === 'Pending' && (
-                        <button className="btn btn-danger btn-sm" onClick={() => cancelOrder(o.id)}>Cancel</button>
+                        <button
+                          className="btn btn-danger btn-sm"
+                          disabled={cancellingId === o.id}
+                          onClick={() => cancelOrder(o.id)}
+                        >
+                          {cancellingId === o.id ? 'Cancelling...' : 'Cancel'}
+                        </button>
                       )}
                     </td>
                   </tr>
