@@ -22,6 +22,7 @@ import AdminUsers from './pages/admin/Users/Users';
 import AdminInventory from './pages/admin/Inventory/Inventory';
 import AdminOrders from './pages/admin/Orders/Orders';
 import AdminInvoices from './pages/admin/Invoices/Invoices';
+import AdminAuditLog from './pages/admin/AuditLog/AuditLog';
 
 import ManagerDashboard from './pages/manager/Dashboard/Dashboard';
 import ManagerApprovals from './pages/manager/Approvals/Approvals';
@@ -29,13 +30,9 @@ import ManagerUsers from './pages/manager/Users/Users';
 import ManagerReports from './pages/manager/Reports/Reports';
 
 import MechanicDashboard from './pages/mechanic/Dashboard/Dashboard';
+
 import MechanicJobDetail from './pages/mechanic/JobDetail/JobDetail';
 
-/**
- * The "/" route is the public front door: guests see the browsable
- * homepage (services + parts), while anyone already logged in is
- * sent straight to their own dashboard instead.
- */
 function RootRoute() {
   const { user } = useAuth();
   if (user) return <Navigate to={dashboardPathForRole(user.role)} replace />;
@@ -51,7 +48,6 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Customer */}
           <Route path="/customer" element={
             <ProtectedRoute roles={['customer']}>
               <DashboardLayout role="customer" title="Customer Portal"><CustomerDashboard /></DashboardLayout>
@@ -67,6 +63,7 @@ export default function App() {
               <DashboardLayout role="customer" title="Appointments"><CustomerAppointments /></DashboardLayout>
             </ProtectedRoute>
           } />
+
           <Route path="/customer/jobs" element={
             <ProtectedRoute roles={['customer']}>
               <DashboardLayout role="customer" title="Service Status"><CustomerJobs /></DashboardLayout>
@@ -83,7 +80,6 @@ export default function App() {
             </ProtectedRoute>
           } />
 
-          {/* Admin */}
           <Route path="/admin" element={
             <ProtectedRoute roles={['admin']}>
               <DashboardLayout role="admin" title="Admin Dashboard"><AdminDashboard /></DashboardLayout>
@@ -100,6 +96,7 @@ export default function App() {
             </ProtectedRoute>
           } />
           <Route path="/admin/jobs/:id" element={
+
             <ProtectedRoute roles={['admin']}>
               <DashboardLayout role="admin" title="Job Detail"><AdminJobDetail /></DashboardLayout>
             </ProtectedRoute>
@@ -124,10 +121,15 @@ export default function App() {
               <DashboardLayout role="admin" title="Invoices & Payments"><AdminInvoices /></DashboardLayout>
             </ProtectedRoute>
           } />
+          <Route path="/admin/audit-log" element={
+            <ProtectedRoute roles={['admin']}>
+              <DashboardLayout role="admin" title="Audit Log"><AdminAuditLog /></DashboardLayout>
+            </ProtectedRoute>
+          } />
 
-          {/* Manager */}
           <Route path="/manager" element={
             <ProtectedRoute roles={['manager']}>
+
               <DashboardLayout role="manager" title="Manager Overview"><ManagerDashboard /></DashboardLayout>
             </ProtectedRoute>
           } />
@@ -147,7 +149,6 @@ export default function App() {
             </ProtectedRoute>
           } />
 
-          {/* Mechanic */}
           <Route path="/mechanic" element={
             <ProtectedRoute roles={['mechanic']}>
               <DashboardLayout role="mechanic" title="My Jobs"><MechanicDashboard /></DashboardLayout>
@@ -161,6 +162,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
       </AuthProvider>
     </BrowserRouter>
   );
