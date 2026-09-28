@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api/api';
 import './Orders.css';
 
@@ -11,40 +12,24 @@ const STATUS_BADGE = {
   Completed: 'badge-neutral',
 };
 
+const OTHER_CATEGORY = 'Other';
+
 export default function Orders() {
+  const navigate = useNavigate();
+
   const [parts, setParts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [cart, setCart] = useState({});
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [cancellingId, setCancellingId] = useState(null);
-
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [showPriceFilter, setShowPriceFilter] = useState(false);
 
   const loadParts = async () => {
     try {
       const params = {};
-
       if (search.trim()) {
         params.search = search.trim();
       }
-
-      if (category) {
-        params.category = category;
-      }
-
-      if (minPrice !== '') {
-        params.min_price = minPrice;
-      }
-
-      if (maxPrice !== '') {
-        params.max_price = maxPrice;
-      }
-
       const { data } = await api.get('/inventory', { params });
       setParts(data?.data || data || []);
     } catch (err) {
@@ -71,56 +56,34 @@ export default function Orders() {
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [search, category, minPrice, maxPrice]);
+  }, [search]);
 
-  const categories = [...new Set(
-    parts
-      .map((part) => part.category?.trim())
-      .filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b));
+  const categories = useMemo(() => {
+    const map = new Map();
 
-  const setQty = (partId, qty, max) => {
-    const value = Math.max(0, Math.min(Number(qty) || 0, max));
-
-    setCart((current) => {
-      const next = { ...current };
-
-      if (value === 0) {
-        delete next[partId];
-      } else {
-        next[partId] = value;
+    parts.forEach((p) => {
+      const name = p.category?.trim() || OTHER_CATEGORY;
+      if (!map.has(name)) {
+        map.set(name, {
+          name,
+          count: 0,
+          min: Infinity,
+          max: -Infinity,
+          image: null,
+          inStock: false,
+        });
       }
-
-      return next;
+      const g = map.get(name);
+      g.count += 1;
+      const price = Number(p.unit_price);
+      g.min = Math.min(g.min, price);
+      g.max = Math.max(g.max, price);
+      if (!g.image && p.image_url) g.image = p.image_url;
+      if (Number(p.quantity) > 0) g.inStock = true;
     });
-  };
 
-  const submitOrder = async () => {
-    const items = Object.entries(cart)
-      .map(([partId, quantity]) => ({
-        part_id: Number(partId),
-        quantity: Number(quantity),
-      }))
-      .filter((item) => item.quantity > 0);
-
-    if (!items.length) {
-      setError('Please select at least one part.');
-      return;
-    }
-
-    setMessage('');
-    setError('');
-
-    try {
-      await api.post('/orders', { items });
-      setMessage('Order submitted successfully.');
-      setCart({});
-      await loadOrders();
-      await loadParts();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'Failed to submit order.');
-    }
-  };
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [parts]);
 
   const cancelOrder = async (id) => {
     setCancellingId(id);
@@ -128,9 +91,10 @@ export default function Orders() {
     setError('');
 
     try {
-      await api.post(`/orders/${id}/cancel`);
+      await api.put(`/orders/${id}/cancel`, {});
       setMessage('Order cancelled successfully.');
       await loadOrders();
+      await loadParts();
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to cancel order.');
     } finally {
@@ -138,26 +102,12 @@ export default function Orders() {
     }
   };
 
-  const clearFilters = () => {
-    setSearch('');
-    setCategory('');
-    setMinPrice('');
-    setMaxPrice('');
-    setShowPriceFilter(false);
-  };
-
-  const hasFilters =
-    search ||
-    category ||
-    minPrice !== '' ||
-    maxPrice !== '';
-
   return (
     <div className="orders-page">
       <div className="orders-header">
         <div>
           <h1>Parts & Orders</h1>
-          <p>Browse available parts and place an order.</p>
+          <p>Choose a category to see the exact parts and prices available in it.</p>
         </div>
       </div>
 
@@ -167,8 +117,8 @@ export default function Orders() {
       <section className="catalog-section">
         <div className="section-header">
           <div>
-            <h2>Available Parts</h2>
-            <p>Select the parts and quantities you need.</p>
+            <h2>Browse by category</h2>
+            <p>Pick a category to view its parts, availability and exact prices.</p>
           </div>
         </div>
 
@@ -180,173 +130,43 @@ export default function Orders() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-
-          {categories.length > 0 && (
-            <select
-              className="filter-select"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-            >
-              <option value="">All categories</option>
-              {categories.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          )}
-
-          <div className="price-filter-wrapper">
-            <button
-              type="button"
-              className={`price-filter-button ${
-                minPrice !== '' || maxPrice !== '' ? 'active' : ''
-              }`}
-              onClick={() => setShowPriceFilter((current) => !current)}
-            >
-              Price
-              {(minPrice !== '' || maxPrice !== '') && ' • Filtered'}
-              <span>▾</span>
-            </button>
-
-            {showPriceFilter && (
-              <div className="price-filter-dropdown">
-                <div className="price-filter-title">Price range</div>
-
-                <div className="price-inputs">
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Min price"
-                    value={minPrice}
-                    onChange={(e) => setMinPrice(e.target.value)}
-                  />
-
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="Max price"
-                    value={maxPrice}
-                    onChange={(e) => setMaxPrice(e.target.value)}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  className="price-apply-button"
-                  onClick={() => setShowPriceFilter(false)}
-                >
-                  Apply
-                </button>
-              </div>
-            )}
-          </div>
-
-          {hasFilters && (
-            <button
-              type="button"
-              className="clear-filter-button"
-              onClick={clearFilters}
-            >
+          {search && (
+            <button type="button" className="clear-filter-button" onClick={() => setSearch('')}>
               Clear
             </button>
           )}
         </div>
 
-        <div className="parts-table-wrapper">
-          <table className="parts-table">
-            <thead>
-              <tr>
-                <th>Image</th>
-                <th>Part</th>
-                <th>Category</th>
-                <th>Price</th>
-                <th>Available</th>
-                <th>Quantity</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {parts.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="empty-state">
-                    No parts found.
-                  </td>
-                </tr>
-              ) : (
-                parts.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      {p.image_url ? (
-                        <img
-                          src={p.image_url}
-                          alt={p.name}
-                          className="part-image"
-                        />
-                      ) : (
-                        <div className="part-image-placeholder">No image</div>
-                      )}
-                    </td>
-
-                    <td>
-                      <div className="part-name">{p.name}</div>
-                      <div className="part-sku">{p.sku}</div>
-                      {p.description && (
-                        <div className="part-description">
-                          {p.description}
-                        </div>
-                      )}
-                    </td>
-
-                    <td>
-                      {p.category || 'Uncategorized'}
-                    </td>
-
-                    <td>
-                      MK {Number(p.unit_price).toLocaleString()}
-                    </td>
-
-                    <td>
-                      {Number(p.quantity) > 0 ? (
-                        p.quantity
-                      ) : (
-                        <span className="out-of-stock">Out of stock</span>
-                      )}
-                    </td>
-
-                    <td>
-                      <input
-                        type="number"
-                        min="0"
-                        max={Number(p.quantity)}
-                        value={cart[p.id] || ''}
-                        disabled={Number(p.quantity) <= 0}
-                        onChange={(e) =>
-                          setQty(
-                            p.id,
-                            e.target.value,
-                            Number(p.quantity)
-                          )
-                        }
-                        className="quantity-input"
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="order-actions">
-          <button
-            type="button"
-            className="submit-order-button"
-            onClick={submitOrder}
-          >
-            Submit Order
-          </button>
-        </div>
+        {categories.length === 0 ? (
+          <div className="empty-state">No parts match your search.</div>
+        ) : (
+          <div className="category-grid">
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                type="button"
+                className="category-card"
+                onClick={() => navigate(`/customer/orders/${encodeURIComponent(cat.name)}`)}
+              >
+                {cat.image ? (
+                  <img src={cat.image} alt={cat.name} className="category-image" />
+                ) : (
+                  <div className="category-image-placeholder">No image</div>
+                )}
+                <div className="category-name">{cat.name}</div>
+                <div className="category-count">
+                  {cat.count} item{cat.count !== 1 ? 's' : ''}
+                </div>
+                <div className="category-price-range">
+                  {cat.min === cat.max
+                    ? `MK ${cat.min.toLocaleString()}`
+                    : `MK ${cat.min.toLocaleString()} - MK ${cat.max.toLocaleString()}`}
+                </div>
+                {!cat.inStock && <span className="out-of-stock">Out of stock</span>}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="orders-section">
@@ -411,8 +231,7 @@ export default function Orders() {
                     </strong>
                   )}
 
-                  {(order.status === 'Pending' ||
-                    order.status === 'Confirmed') && (
+                  {order.status === 'Pending' && (
                     <button
                       type="button"
                       className="cancel-order-button"
