@@ -95,6 +95,7 @@ try {
                 $method === 'POST' && $id === null => InventoryController::create($body),
                 $method === 'POST' && $action === 'stock-in' && $id => InventoryController::stockIn($id, $body),
                 $method === 'POST' && $action === 'adjust' && $id => InventoryController::adjust($id, $body),
+                $method === 'PUT' && $id && $action === null => InventoryController::update($id, $body),
                 default => Response::error('Route not found.', 404),
 
             };

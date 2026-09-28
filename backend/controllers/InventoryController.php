@@ -116,6 +116,60 @@ class InventoryController
         Response::success(['id' => $id], 'Part added to inventory.', 201);
     }
 
+    /**
+     * Edit a part's details: name, SKU, description, price, minimum stock
+     * level, image and category. Quantity is intentionally not editable
+     * here - stock changes must go through stockIn()/adjust() so every
+     * change is recorded in stock_movements.
+     */
+    public static function update(int $id, array $body): void
+    {
+        $payload = require_auth();
+        require_role($payload, ['admin', 'manager']);
+
+        $db = Database::connect();
+        $existing = $db->prepare('SELECT id FROM parts WHERE id = :id');
+        $existing->execute([':id' => $id]);
+        if (!$existing->fetch()) {
+            Response::error('Part not found.', 404);
+        }
+
+        $name = trim($body['name'] ?? '');
+        $sku = trim($body['sku'] ?? '');
+        $price = $body['unit_price'] ?? null;
+        $minStock = $body['min_stock_level'] ?? null;
+        $desc = trim($body['description'] ?? '');
+        $imageUrl = trim($body['image_url'] ?? '');
+        $category = trim($body['category'] ?? '');
+
+        if (!$name || !$sku || $price === null) {
+            Response::error('Name, SKU and unit price are required.');
+        }
+
+        try {
+            $stmt = $db->prepare(
+                'UPDATE parts SET name = :name, sku = :sku, description = :desc, unit_price = :price,
+                 min_stock_level = :min, image_url = :image, category = :category WHERE id = :id'
+            );
+
+            $stmt->execute([
+                ':name' => $name,
+                ':sku' => $sku,
+                ':desc' => $desc ?: null,
+                ':price' => $price,
+                ':min' => ($minStock !== null && $minStock !== '') ? (int) $minStock : 5,
+                ':image' => $imageUrl ?: null,
+                ':category' => $category ?: null,
+                ':id' => $id,
+            ]);
+        } catch (PDOException $e) {
+            Response::error('A part with that SKU already exists.', 409);
+        }
+
+        Audit::log($payload['id'], $payload['role'], 'Edited part details', 'parts', $id);
+        Response::success([], 'Part updated.');
+    }
+
     public static function stockIn(int $id, array $body): void
     {
         $payload = require_auth();

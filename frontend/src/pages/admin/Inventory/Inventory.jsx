@@ -1,19 +1,24 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import api from '../../../api/api';
 import { uploadImage } from '../../../api/cloudinary';
 import './Inventory.css';
 
+const EMPTY_FORM = { name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5', image_url: '', category: '' };
+
 export default function Inventory() {
   const [parts, setParts] = useState([]);
-  const [showAdd, setShowAdd] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [formMode, setFormMode] = useState('add');
+  const [editingId, setEditingId] = useState(null);
   const [stockModal, setStockModal] = useState(null);
-  const [form, setForm] = useState({ name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5', image_url: '' });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [stockForm, setStockForm] = useState({ quantity: '', reason: '' });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
-  // Search / price-range / low-stock filters.
+  // Search / category / price-range / low-stock filters.
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -21,6 +26,7 @@ export default function Inventory() {
   function load() {
     const params = {};
     if (search.trim()) params.search = search.trim();
+    if (category) params.category = category;
     if (minPrice !== '') params.min_price = minPrice;
     if (maxPrice !== '') params.max_price = maxPrice;
     if (lowStockOnly) params.low_stock = 1;
@@ -31,13 +37,47 @@ export default function Inventory() {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, minPrice, maxPrice, lowStockOnly]);
+  }, [search, category, minPrice, maxPrice, lowStockOnly]);
+
+  const existingCategories = useMemo(() => {
+    const set = new Set();
+    parts.forEach((p) => {
+      if (p.category && p.category.trim()) set.add(p.category.trim());
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [parts]);
 
   function clearFilters() {
     setSearch('');
+    setCategory('');
     setMinPrice('');
     setMaxPrice('');
     setLowStockOnly(false);
+  }
+
+  function openAdd() {
+    setForm(EMPTY_FORM);
+    setFormMode('add');
+    setEditingId(null);
+    setError('');
+    setShowForm(true);
+  }
+
+  function openEdit(part) {
+    setForm({
+      name: part.name,
+      sku: part.sku,
+      description: part.description || '',
+      unit_price: part.unit_price,
+      quantity: '',
+      min_stock_level: part.min_stock_level,
+      image_url: part.image_url || '',
+      category: part.category || '',
+    });
+    setFormMode('edit');
+    setEditingId(part.id);
+    setError('');
+    setShowForm(true);
   }
 
   async function handleImageChange(e) {
@@ -55,16 +95,22 @@ export default function Inventory() {
     }
   }
 
-  async function handleAdd(e) {
+  async function handleFormSubmit(e) {
     e.preventDefault();
     setError('');
     try {
-      await api.post('/inventory', form);
-      setShowAdd(false);
-      setForm({ name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5', image_url: '' });
+      if (formMode === 'edit') {
+        const { quantity, ...rest } = form;
+        await api.put(`/inventory/${editingId}`, rest);
+      } else {
+        await api.post('/inventory', form);
+      }
+      setShowForm(false);
+      setForm(EMPTY_FORM);
+      setEditingId(null);
       load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not add part.');
+      setError(err.response?.data?.message || `Could not ${formMode === 'edit' ? 'update' : 'add'} part.`);
     }
   }
 
@@ -90,9 +136,9 @@ export default function Inventory() {
       <div className="page-header">
         <div>
           <h1>Inventory</h1>
-          <p>Manage spare parts stock levels.</p>
+          <p>Manage spare parts stock levels and categories.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowAdd(true)}>+ Add Part</button>
+        <button className="btn btn-primary" onClick={openAdd}>+ Add Part</button>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -105,13 +151,21 @@ export default function Inventory() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {existingCategories.length > 0 && (
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            <option value="">All categories</option>
+            {existingCategories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        )}
         <input type="number" min={0} placeholder="Min price" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} />
         <input type="number" min={0} placeholder="Max price" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} />
         <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
           <input type="checkbox" checked={lowStockOnly} onChange={(e) => setLowStockOnly(e.target.checked)} style={{ width: 'auto' }} />
           Low stock only
         </label>
-        {(search || minPrice !== '' || maxPrice !== '' || lowStockOnly) && (
+        {(search || category || minPrice !== '' || maxPrice !== '' || lowStockOnly) && (
           <button type="button" className="btn btn-outline btn-sm" onClick={clearFilters}>Clear</button>
         )}
       </div>
@@ -119,21 +173,22 @@ export default function Inventory() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Image</th><th>Part</th><th>SKU</th><th>Price</th><th>Stock</th><th>Min level</th><th></th></tr>
+            <tr><th>Image</th><th>Part</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Min level</th><th></th></tr>
           </thead>
           <tbody>
-            {parts.length === 0 && <tr><td colSpan={7} className="empty-state">No parts match your filters.</td></tr>}
+            {parts.length === 0 && <tr><td colSpan={8} className="empty-state">No parts match your filters.</td></tr>}
             {parts.map((p) => (
               <tr key={p.id}>
                 <td>
                   {p.image_url ? (
-                    <img src={p.image_url} alt={p.name} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6 }} />
+                    <img src={p.image_url} alt={p.name} style={{ width: 44, height: 44, objectFit: 'cover', borderRadius:6 }} />
                   ) : (
                     <div style={{ width: 44, height: 44, borderRadius: 6, background: '#f1f1f1' }} />
                   )}
                 </td>
                 <td>{p.name}</td>
                 <td>{p.sku}</td>
+                <td>{p.category || <span style={{ color: 'var(--color-text-muted)' }}>Uncategorized</span>}</td>
                 <td>MK {Number(p.unit_price).toLocaleString()}</td>
                 <td>
                   {p.quantity}
@@ -141,6 +196,7 @@ export default function Inventory() {
                 </td>
                 <td>{p.min_stock_level}</td>
                 <td className="action-cell">
+                  <button className="btn btn-outline btn-sm" onClick={() => openEdit(p)}>Edit</button>
                   <button className="btn btn-outline btn-sm" onClick={() => setStockModal({ part: p, mode: 'in' })}>StockIn</button>
                   <button className="btn btn-outline btn-sm" onClick={() => setStockModal({ part: p, mode: 'adjust' })}>Adjust</button>
                 </td>
@@ -150,21 +206,47 @@ export default function Inventory() {
         </table>
       </div>
 
-      {showAdd && (
-        <div className="modal-backdrop" onClick={() => setShowAdd(false)}>
+      {showForm && (
+        <div className="modal-backdrop" onClick={() => setShowForm(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>Add new part</h2>
-            <form onSubmit={handleAdd}>
+            <h2>{formMode === 'edit' ? `Edit ${form.name}` : 'Add new part'}</h2>
+            <form onSubmit={handleFormSubmit}>
               <div className="form-row">
                 <div className="form-group"><label>Name</label><input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required /></div>
                 <div className="form-group"><label>SKU</label><input value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} required /></div>
               </div>
-              <div className="form-group"><label>Description</label><textarea rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
               <div className="form-row">
+                <div className="form-group">
+                  <label>Category</label>
+                  <input
+                    list="category-options"
+                    value={form.category}
+                    onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+                    placeholder="e.g. Air Filter, Car Battery, Brake Pads"
+                  />
+                  <datalist id="category-options">
+                    {existingCategories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
+                </div>
                 <div className="form-group"><label>Unit price (MK)</label><input type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} required /></div>
-                <div className="form-group"><label>Initial quantity</label><input type="number" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} /></div>
               </div>
-              <div className="form-group"><label>Minimum stock level (for low-stock alerts)</label><input type="number" value={form.min_stock_level} onChange={(e) => setForm((f) => ({ ...f, min_stock_level: e.target.value }))} /></div>
+              <div className="form-group"><label>Description</label><textarea rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
+              {formMode === 'add' ? (
+                <div className="form-row">
+                  <div className="form-group"><label>Initial quantity</label><input type="number" value={form.quantity} onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} /></div>
+                  <div className="form-group"><label>Minimum stock level (for low-stock alerts)</label><input type="number" value={form.min_stock_level} onChange={(e) => setForm((f) => ({ ...f, min_stock_level: e.target.value }))} /></div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Minimum stock level (for low-stock alerts)</label>
+                  <input type="number" value={form.min_stock_level} onChange={(e) => setForm((f) => ({ ...f, min_stock_level: e.target.value }))} />
+                  <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', margin: '4px 0 0' }}>
+                    To change stock quantity, use StockIn or Adjust instead.
+                  </p>
+                </div>
+              )}
               <div className="form-group">
                 <label>Photo</label>
                 <input type="file" accept="image/*" onChange={handleImageChange} />
@@ -174,8 +256,10 @@ export default function Inventory() {
                 )}
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn btn-outline" onClick={() => setShowAdd(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={uploading}>Add Part</button>
+                <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={uploading}>
+                  {formMode === 'edit' ? 'Save Changes' : 'Add Part'}
+                </button>
               </div>
             </form>
           </div>
@@ -193,7 +277,7 @@ export default function Inventory() {
               </div>
               <div className="form-group">
                 <label>Reason</label>
-                <input value={stockForm.reason} onChange={(e) => setStockForm((f) => ({ ...f, reason: e.target.value }))} placeholder="e.g. Supplier delivery, stock count correction" required={stockModal.mode === 'adjust'} />
+                <input value={stockForm.reason} onChange={(e) => setStockForm((f) => ({ ...f, reason: e.target.value }))}placeholder="e.g. Supplier delivery, stock count correction" required={stockModal.mode === 'adjust'} />
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setStockModal(null)}>Cancel</button>
