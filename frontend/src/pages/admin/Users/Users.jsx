@@ -30,6 +30,7 @@ export default function Users() {
   useEffect(() => {
     const t = setTimeout(loadStaff, 250);
     return () => clearTimeout(t);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffSearch]);
 
@@ -59,23 +60,23 @@ export default function Users() {
     }
   }
 
-  async function toggleActive(id, reload) {
-    await api.post(`/users/${id}/toggle-active`);
-    reload();
-  }
+  async function toggleActive(u, reload) {
+    const deactivating = u.is_active;
+    const message = deactivating
 
-  async function deleteUser(id, name, reload) {
-    if (!window.confirm(`Permanently delete ${name}'s account? This cannot be undone.`)) return;
+      ? `Deactivate ${u.name}? They will no longer be able to log in.`
+      : `Reactivate ${u.name}'s account?`;
+    if (!window.confirm(message)) return;
     setError('');
     try {
-      await api.delete(`/users/${id}`);
+      await api.post(`/users/${u.id}/toggle-active`);
       reload();
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not delete user.');
+      setError(err.response?.data?.message || 'Could not update account status.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 
-  // Admin can only create mechanics; only manager can create admin/manager accounts.
   const roleOptions = isManager ? ['mechanic', 'admin', 'manager'] : ['mechanic'];
 
   return (
@@ -88,13 +89,14 @@ export default function Users() {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>+ Add User</button>
       </div>
 
-      {error && <div className="alert alert-error">{error}</div>}
+      {error && !showModal && <div className="alert alert-error">{error}</div>}
 
       <div className="filter-bar">
         <input
           className="filter-search"
           type="text"
-          placeholder="Search staff by name, email or role…"
+          placeholder="Search staff by name, email or role..."
+
           value={staffSearch}
           onChange={(e) => setStaffSearch(e.target.value)}
         />
@@ -112,18 +114,22 @@ export default function Users() {
                 <td>{s.name}</td>
                 <td>{s.email}</td>
                 <td style={{ textTransform: 'capitalize' }}>{s.role}</td>
-                <td>{s.specialty || '—'}</td>
+                <td>{s.specialty || '-'}</td>
                 <td>
                   <span className={`badge ${s.is_active ? 'badge-success' : 'badge-danger'}`}>
                     {s.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td className="action-cell">
-                  <button className="btn btn-outline btn-sm" onClick={() => toggleActive(s.id, loadStaff)}>
-                    {s.is_active ? 'Deactivate' : 'Activate'}
+                  <button
+                    className="btn btn-outline btn-sm"
+                    disabled={s.id === user?.id}
+                    onClick={() => toggleActive(s, loadStaff)}
+                  >
+                    {s.is_active ? 'Deactivate' : 'Reactivate'}
                   </button>
-                  <button className="btn btn-danger btn-sm" onClick={() => deleteUser(s.id, s.name, loadStaff)}>Delete</button>
                 </td>
+
               </tr>
             ))}
           </tbody>
@@ -135,7 +141,7 @@ export default function Users() {
           <div className="page-header">
             <div>
               <h1 style={{ fontSize: '1.2rem' }}>Customers</h1>
-              <p>Reactivate a suspended customer account, or remove one entirely.</p>
+              <p>Deactivate or reactivate customer accounts.</p>
             </div>
           </div>
 
@@ -143,7 +149,7 @@ export default function Users() {
             <input
               className="filter-search"
               type="text"
-              placeholder="Search customers by name or email…"
+              placeholder="Search customers by name or email..."
               value={customerSearch}
               onChange={(e) => setCustomerSearch(e.target.value)}
             />
@@ -156,21 +162,21 @@ export default function Users() {
               </thead>
               <tbody>
                 {customers.length === 0 && <tr><td colSpan={5} className="empty-state">No customers found.</td></tr>}
+
                 {customers.map((c) => (
                   <tr key={c.id}>
                     <td>{c.name}</td>
                     <td>{c.email}</td>
-                    <td>{c.phone || '—'}</td>
+                    <td>{c.phone || '-'}</td>
                     <td>
                       <span className={`badge ${c.is_active ? 'badge-success' : 'badge-danger'}`}>
                         {c.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="action-cell">
-                      <button className="btn btn-outline btn-sm" onClick={() => toggleActive(c.id, loadCustomers)}>
+                      <button className="btn btn-outline btn-sm" onClick={() => toggleActive(c, loadCustomers)}>
                         {c.is_active ? 'Deactivate' : 'Reactivate'}
                       </button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteUser(c.id, c.name, loadCustomers)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -189,6 +195,7 @@ export default function Users() {
               <div className="form-group">
                 <label>Full name</label>
                 <input value={form.name} onChange={(e) => update('name', e.target.value)} required />
+
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -218,9 +225,10 @@ export default function Users() {
               </div>
               <div className="modal-actions">
                 <button type="button" className="btn btn-outline" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Creating…' : 'Create Account'}</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Creating...' : 'Create Account'}</button>
               </div>
             </form>
+
           </div>
         </div>
       )}
