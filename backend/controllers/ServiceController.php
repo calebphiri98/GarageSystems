@@ -6,10 +6,25 @@ require_once __DIR__ . '/../middleware/auth.php';
 
 class ServiceController
 {
+    /**
+     * Public catalog (Home page, etc.) gets only active services with no
+     * auth required - unchanged behaviour. Passing ?all=1 additionally
+     * returns inactive services, but is restricted to admin/manager, for
+     * the internal "Manage Services" page.
+     */
     public static function list(): void
     {
         $db = Database::connect();
-        $stmt = $db->query('SELECT * FROM services WHERE is_active = TRUE ORDER BY name');
+        $includeInactive = isset($_GET['all']) && $_GET['all'] === '1';
+
+        if ($includeInactive) {
+            $payload = require_auth();
+            require_role($payload, ['admin', 'manager']);
+            $stmt = $db->query('SELECT * FROM services ORDER BY name');
+        } else {
+            $stmt = $db->query('SELECT * FROM services WHERE is_active = TRUE ORDER BY name');
+        }
+
         Response::success($stmt->fetchAll());
     }
 
@@ -31,7 +46,7 @@ class ServiceController
         $ins = $db->prepare(
             'INSERT INTO services (name, description, estimated_price, image_url) VALUES (:name, :desc, :price, :image) RETURNING id'
         );
-        $ins->execute([':name' => $name, ':desc' => $description ?: null, ':price' => $price, ':image' => $imageUrl ?: null]);
+        $ins->execute([':name' => $name, ':desc' => $description ?: null, ':price' => $price ?: null, ':image' => $imageUrl ?: null]);
         $id = $ins->fetch()['id'];
 
         Audit::log($payload['id'], $payload['role'], 'Added service to catalog', 'services', $id);
