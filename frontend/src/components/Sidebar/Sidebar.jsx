@@ -16,6 +16,7 @@ const LINKS = {
     { to: '/admin/jobs', label: 'Job Cards' },
     { to: '/admin/users', label: 'Staff & Mechanics' },
     { to: '/admin/inventory', label: 'Inventory' },
+    { to: '/admin/services', label: 'Services' },
     { to: '/admin/orders', label: 'Parts Orders' },
     { to: '/admin/invoices', label: 'Invoices & Payments' },
     { to: '/admin/audit-log', label: 'Audit Log' },
