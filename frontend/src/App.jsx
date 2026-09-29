@@ -21,6 +21,7 @@ import AdminJobs from './pages/admin/Jobs/Jobs';
 import AdminJobDetail from './pages/admin/JobDetail/JobDetail';
 import AdminUsers from './pages/admin/Users/Users';
 import AdminInventory from './pages/admin/Inventory/Inventory';
+import AdminServices from './pages/admin/Services/Services';
 import AdminOrders from './pages/admin/Orders/Orders';
 import AdminInvoices from './pages/admin/Invoices/Invoices';
 import AdminAuditLog from './pages/admin/AuditLog/AuditLog';
@@ -115,6 +116,11 @@ export default function App() {
           <Route path="/admin/inventory" element={
             <ProtectedRoute roles={['admin']}>
               <DashboardLayout role="admin" title="Inventory"><AdminInventory /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/services" element={
+            <ProtectedRoute roles={['admin']}>
+              <DashboardLayout role="admin" title="Services"><AdminServices /></DashboardLayout>
             </ProtectedRoute>
           } />
           <Route path="/admin/orders" element={
