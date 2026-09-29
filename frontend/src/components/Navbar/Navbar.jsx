@@ -1,6 +1,5 @@
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import logo from '../../assets/logo.jpeg';
 import './Navbar.css';
 
 export default function Navbar({ title }) {
@@ -12,11 +11,15 @@ export default function Navbar({ title }) {
     navigate('/login');
   }
 
+  const initials = user?.name
+    ? user.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
+
   return (
     <header className="navbar">
       <h1 className="navbar-title">{title}</h1>
       <div className="navbar-user">
-        <img src={logo} alt="Uptown Garage" className="navbar-avatar" />
+        <div className="navbar-avatar">{initials}</div>
         <div className="navbar-user-info">
           <div className="navbar-user-name">{user?.name}</div>
           <div className="navbar-user-role">{user?.role}</div>
