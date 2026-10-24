@@ -126,7 +126,7 @@ export default function Orders() {
           <input
             className="filter-search"
             type="text"
-            placeholder="Search parts by name, SKU or description..."
+            placeholder="Search parts by name, SKU, serial number or brand..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
