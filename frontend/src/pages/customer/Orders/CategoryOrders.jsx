@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import api from '../../../api/api';
 import './Orders.css';
+import './CategoryFilters.css';
 
 const OTHER_CATEGORY = 'Other';
 
 export default function CategoryOrders() {
   const { category } = useParams();
-  const navigate = useNavigate();
   const categoryLabel = decodeURIComponent(category || '');
   const isOther = categoryLabel === OTHER_CATEGORY;
 
@@ -18,15 +18,19 @@ export default function CategoryOrders() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Filter panel state. Nothing is shown until the customer opens the panel.
+  const [filterTypes, setFilterTypes] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [openTypes, setOpenTypes] = useState({});
+  const [selected, setSelected] = useState([]); // selected option ids
+
   const loadParts = async () => {
     try {
       const params = {};
-      if (search.trim()) {
-        params.search = search.trim();
-      }
-      if (!isOther) {
-        params.category = categoryLabel;
-      }
+      if (search.trim()) params.search = search.trim();
+      if (!isOther) params.category = categoryLabel;
+      if (selected.length) params.filters = selected.join(',');
+
       const { data } = await api.get('/inventory', { params });
       const list = data?.data || data || [];
       setParts(isOther ? list.filter((p) => !p.category || !p.category.trim()) : list);
@@ -35,19 +39,48 @@ export default function CategoryOrders() {
     }
   };
 
+  // When the category changes: reset everything and load that category's filters.
   useEffect(() => {
-    loadParts();
     setCart({});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setSearch('');
+    setSelected([]);
+    setOpenTypes({});
+    setShowFilters(false);
+
+    if (isOther) {
+      setFilterTypes([]);
+      return;
+    }
+
+    api
+      .get('/inventory/filters', { params: { category: categoryLabel } })
+      .then(({ data }) => setFilterTypes(data?.data || []))
+      .catch(() => setFilterTypes([]));
   }, [categoryLabel]);
 
+  // Reload parts whenever the category, search text or selected filters change.
   useEffect(() => {
-    const timer = setTimeout(() => {
-      loadParts();
-    }, 250);
+    const timer = setTimeout(loadParts, 250);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [categoryLabel, search, selected]);
+
+  const toggleType = (id) => setOpenTypes((cur) => ({ ...cur, [id]: !cur[id] }));
+
+  const toggleOption = (id) =>
+    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+
+  const selectedChips = useMemo(() => {
+    const chips = [];
+    filterTypes.forEach((t) =>
+      t.options.forEach((o) => {
+        if (selected.includes(o.id)) chips.push({ id: o.id, label: `${t.name}: ${o.value}` });
+      })
+    );
+    return chips;
+  }, [filterTypes, selected]);
+
+  const selectedInType = (type) => type.options.filter((o) => selected.includes(o.id)).length;
 
   const setQty = (partId, qty, max) => {
     const value = Math.max(0, Math.min(Number(qty) || 0, max));
@@ -121,16 +154,97 @@ export default function CategoryOrders() {
           <input
             className="filter-search"
             type="text"
-            placeholder={`Search within ${categoryLabel}...`}
+            placeholder={`Search ${categoryLabel} by name, SKU, serial number or brand...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          {search && (
-            <button type="button" className="clear-filter-button" onClick={() => setSearch('')}>
+
+          {filterTypes.length > 0 && (
+            <button
+              type="button"
+              className={`filters-toggle ${showFilters ? 'is-open' : ''}`}
+              aria-expanded={showFilters}
+              onClick={() => setShowFilters((v) => !v)}
+            >
+              Filters{selected.length > 0 ? ` (${selected.length})` : ''}
+            </button>
+          )}
+
+          {(search || selected.length > 0) && (
+            <button
+              type="button"
+              className="clear-filter-button"
+              onClick={() => {
+                setSearch('');
+                setSelected([]);
+              }}
+            >
               Clear
             </button>
           )}
         </div>
+
+        {showFilters && (
+          <div className="filters-panel">
+            {filterTypes.map((type) => {
+              const isOpen = !!openTypes[type.id];
+              const count = selectedInType(type);
+
+              return (
+                <div className="filter-group" key={type.id}>
+                  <button
+                    type="button"
+                    className="filter-group-head"
+                    aria-expanded={isOpen}
+                    onClick={() => toggleType(type.id)}
+                  >
+                    <span>
+                      {type.name}
+                      {count > 0 && <em className="filter-group-count">{count}</em>}
+                    </span>
+                    <span className={`filter-chevron ${isOpen ? 'is-open' : ''}`} aria-hidden="true" />
+                  </button>
+
+                  {isOpen && (
+                    <div className="filter-options">
+                      {type.options.length === 0 ? (
+                        <p className="filter-empty">No options added yet.</p>
+                      ) : (
+                        type.options.map((opt) => (
+                          <label className="filter-option" key={opt.id}>
+                            <input
+                              type="checkbox"
+                              checked={selected.includes(opt.id)}
+                              onChange={() => toggleOption(opt.id)}
+                            />
+                            <span>{opt.value}</span>
+                            <small>{opt.part_count}</small>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {selectedChips.length > 0 && (
+          <div className="filter-chips">
+            {selectedChips.map((chip) => (
+              <button
+                type="button"
+                key={chip.id}
+                className="filter-chip"
+                onClick={() => toggleOption(chip.id)}
+                title="Remove filter"
+              >
+                {chip.label} &times;
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="parts-table-wrapper">
           <table className="parts-table">
@@ -148,7 +262,9 @@ export default function CategoryOrders() {
               {parts.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="empty-state">
-                    No parts found in {categoryLabel}.
+                    {search || selected.length
+                      ? 'No parts match your search or filters. Try removing a filter.'
+                      : `No parts found in ${categoryLabel}.`}
                   </td>
                 </tr>
               ) : (
@@ -164,7 +280,11 @@ export default function CategoryOrders() {
 
                     <td>
                       <div className="part-name">{p.name}</div>
-                      <div className="part-sku">{p.sku}</div>
+                      <div className="part-sku">
+                        SKU: {p.sku}
+                        {p.serial_number ? ` | Serial: ${p.serial_number}` : ''}
+                        {p.brand ? ` | ${p.brand}` : ''}
+                      </div>
                       {p.description && (
                         <div className="part-description">{p.description}</div>
                       )}
