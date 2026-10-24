@@ -1,0 +1,141 @@
+/* Filter toggle, panel and chips for CategoryOrders.
+   Uses your theme variables when they exist, with fallbacks so it works either way. */
+
+.filters-toggle {
+  padding: 10px 18px;
+  border: 1px solid var(--border, #d6d9de);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filters-toggle:hover,
+.filters-toggle.is-open {
+  border-color: var(--primary, #c8102e);
+  color: var(--primary, #c8102e);
+}
+
+.filters-toggle:focus-visible,
+.filter-group-head:focus-visible,
+.filter-chip:focus-visible {
+  outline: 2px solid var(--primary, #c8102e);
+  outline-offset: 2px;
+}
+
+.filters-panel {
+  margin-top: 12px;
+  border: 1px solid var(--border, #d6d9de);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  overflow: hidden;
+}
+
+.filter-group + .filter-group {
+  border-top: 1px solid var(--border, #d6d9de);
+}
+
+.filter-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.filter-group-head:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.filter-group-count {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--primary, #c8102e);
+  color: #fff;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.filter-chevron {
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.filter-chevron.is-open {
+  transform: rotate(-135deg);
+}
+
+.filter-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 4px 16px;
+  padding: 0 16px 14px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.filter-option input {
+  accent-color: var(--primary, #c8102e);
+}
+
+.filter-option small {
+  margin-left: auto;
+  color: var(--muted, #7a808a);
+}
+
+.filter-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted, #7a808a);
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.filter-chip {
+  padding: 5px 12px;
+  border: 1px solid var(--primary, #c8102e);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary, #c8102e);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  background: var(--primary, #c8102e);
+  color: #fff;
+}
+
+@media (max-width: 600px) {
+  .filter-bar {
+    flex-wrap: wrap;
+  }
+}
