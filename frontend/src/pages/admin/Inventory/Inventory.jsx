@@ -1,12 +1,27 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../../../api/api';
 import { uploadImage } from '../../../api/cloudinary';
 import './Inventory.css';
 
-const EMPTY_FORM = { name: '', sku: '', description: '', unit_price: '', quantity: '', min_stock_level: '5', image_url: '', category: '' };
+const EMPTY_FORM = {
+  name: '',
+  sku: '',
+  serial_number: '',
+  brand: '',
+  description: '',
+  unit_price: '',
+  quantity: '',
+  min_stock_level: '5',
+  image_url: '',
+  category: '',
+  filter_option_ids: [],
+};
+
+const MUTED = { fontSize: '0.8rem', color: 'var(--color-text-muted)' };
 
 export default function Inventory() {
   const [parts, setParts] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [formMode, setFormMode] = useState('add');
   const [editingId, setEditingId] = useState(null);
@@ -16,7 +31,17 @@ export default function Inventory() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
-  // Search / category / price-range / low-stock filters.
+  // Filter types shown inside the add/edit form for the chosen category.
+  const [formFilterTypes, setFormFilterTypes] = useState([]);
+
+  // "Manage filters" pop-up.
+  const [manageOpen, setManageOpen] = useState(false);
+  const [mfCategory, setMfCategory] = useState('');
+  const [mfTypes, setMfTypes] = useState([]);
+  const [newTypeName, setNewTypeName] = useState('');
+  const [newOptionValues, setNewOptionValues] = useState({});
+
+  // Search / category / price-range / low-stock filters for the table.
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [minPrice, setMinPrice] = useState('');
@@ -33,19 +58,90 @@ export default function Inventory() {
     api.get('/inventory', { params }).then((r) => setParts(r.data.data));
   }
 
+  function loadCategories() {
+    api
+      .get('/inventory')
+      .then((r) => {
+        const set = new Set();
+        (r.data.data || []).forEach((p) => {
+          if (p.category && p.category.trim()) set.add(p.category.trim());
+        });
+        setAllCategories(Array.from(set).sort((a, b) => a.localeCompare(b)));
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, category, minPrice, maxPrice, lowStockOnly]);
 
-  const existingCategories = useMemo(() => {
-    const set = new Set();
-    parts.forEach((p) => {
-      if (p.category && p.category.trim()) set.add(p.category.trim());
-    });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [parts]);
+  const existingCategories = allCategories;
+
+  // Load the filter types for the category typed/picked in the add/edit form.
+  useEffect(() => {
+    if (!showForm) return;
+
+    const cat = form.category.trim();
+    if (!cat) {
+      setFormFilterTypes([]);
+      setForm((f) => (f.filter_option_ids.length ? { ...f, filter_option_ids: [] } : f));
+      return;
+    }
+
+    let cancelled = false;
+    const t = setTimeout(() => {
+      api
+        .get('/inventory/filters', { params: { category: cat } })
+        .then((r) => {
+          if (cancelled) return;
+          const types = r.data?.data || [];
+          setFormFilterTypes(types);
+
+          // Drop selected options that don't belong to this category.
+          const valid = new Set(types.flatMap((ty) => ty.options.map((o) => o.id)));
+          setForm((f) => {
+            const kept = f.filter_option_ids.filter((id) => valid.has(id));
+            return kept.length === f.filter_option_ids.length ? f : { ...f, filter_option_ids: kept };
+          });
+        })
+        .catch(() => {
+          if (!cancelled) setFormFilterTypes([]);
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [showForm, form.category]);
+
+  // Load filter types for the "Manage filters" pop-up.
+  async function loadManageTypes(cat = mfCategory) {
+    const c = cat.trim();
+    if (!c) {
+      setMfTypes([]);
+      return;
+    }
+    try {
+      const r = await api.get('/inventory/filters', { params: { category: c } });
+      setMfTypes(r.data?.data || []);
+    } catch {
+      setMfTypes([]);
+    }
+  }
+
+  useEffect(() => {
+    if (!manageOpen) return;
+    const t = setTimeout(() => loadManageTypes(), 300);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manageOpen, mfCategory]);
 
   function clearFilters() {
     setSearch('');
@@ -57,6 +153,7 @@ export default function Inventory() {
 
   function openAdd() {
     setForm(EMPTY_FORM);
+    setFormFilterTypes([]);
     setFormMode('add');
     setEditingId(null);
     setError('');
@@ -67,17 +164,29 @@ export default function Inventory() {
     setForm({
       name: part.name,
       sku: part.sku,
+      serial_number: part.serial_number || '',
+      brand: part.brand || '',
       description: part.description || '',
       unit_price: part.unit_price,
       quantity: '',
       min_stock_level: part.min_stock_level,
       image_url: part.image_url || '',
       category: part.category || '',
+      filter_option_ids: Array.isArray(part.option_ids) ? part.option_ids : [],
     });
     setFormMode('edit');
     setEditingId(part.id);
     setError('');
     setShowForm(true);
+  }
+
+  function toggleFormOption(id) {
+    setForm((f) => ({
+      ...f,
+      filter_option_ids: f.filter_option_ids.includes(id)
+        ? f.filter_option_ids.filter((x) => x !== id)
+        : [...f.filter_option_ids, id],
+    }));
   }
 
   async function handleImageChange(e) {
@@ -109,6 +218,7 @@ export default function Inventory() {
       setForm(EMPTY_FORM);
       setEditingId(null);
       load();
+      loadCategories();
     } catch (err) {
       setError(err.response?.data?.message || `Could not ${formMode === 'edit' ? 'update' : 'add'} part.`);
     }
@@ -131,6 +241,68 @@ export default function Inventory() {
     }
   }
 
+  // ---------- Manage filters actions ----------
+  function openManage() {
+    setMfCategory(category || '');
+    setMfTypes([]);
+    setNewTypeName('');
+    setNewOptionValues({});
+    setError('');
+    setManageOpen(true);
+  }
+
+  async function addFilterType(e) {
+    e.preventDefault();
+    const cat = mfCategory.trim();
+    const name = newTypeName.trim();
+    if (!cat || !name) return;
+    setError('');
+    try {
+      await api.post('/inventory/filter-types', { category: cat, name });
+      setNewTypeName('');
+      loadManageTypes(cat);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not add filter.');
+    }
+  }
+
+  async function addFilterOption(typeId) {
+    const value = (newOptionValues[typeId] || '').trim();
+    if (!value) return;
+    setError('');
+    try {
+      await api.post('/inventory/filter-options', { filter_type_id: typeId, value });
+      setNewOptionValues((cur) => ({ ...cur, [typeId]: '' }));
+      loadManageTypes();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not add option.');
+    }
+  }
+
+  async function deleteFilterType(type) {
+    if (!window.confirm(`Delete the "${type.name}" filter and all its options?`)) return;
+    setError('');
+    try {
+      await api.delete(`/inventory/${type.id}/filter-type`);
+      loadManageTypes();
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not delete filter.');
+    }
+  }
+
+  async function deleteFilterOption(opt) {
+    if (!window.confirm(`Delete the option "${opt.value}"?`)) return;
+    setError('');
+    try {
+      await api.delete(`/inventory/${opt.id}/filter-option`);
+      loadManageTypes();
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not delete option.');
+    }
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -138,7 +310,10 @@ export default function Inventory() {
           <h1>Inventory</h1>
           <p>Manage spare parts stock levels and categories.</p>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ Add Part</button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn btn-outline" onClick={openManage}>Manage filters</button>
+          <button className="btn btn-primary" onClick={openAdd}>+ Add Part</button>
+        </div>
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -147,7 +322,7 @@ export default function Inventory() {
         <input
           className="filter-search"
           type="text"
-          placeholder="Search by name, SKU or description…"
+          placeholder="Search by name, SKU, serial number or brand…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -186,7 +361,16 @@ export default function Inventory() {
                     <div style={{ width: 44, height: 44, borderRadius: 6, background: '#f1f1f1' }} />
                   )}
                 </td>
-                <td>{p.name}</td>
+                <td>
+                  <div>{p.name}</div>
+                  {(p.serial_number || p.brand) && (
+                    <div style={MUTED}>
+                      {p.brand}
+                      {p.brand && p.serial_number ? ' | ' : ''}
+                      {p.serial_number ? `Serial: ${p.serial_number}` : ''}
+                    </div>
+                  )}
+                </td>
                 <td>{p.sku}</td>
                 <td>{p.category || <span style={{ color: 'var(--color-text-muted)' }}>Uncategorized</span>}</td>
                 <td>MK {Number(p.unit_price).toLocaleString()}</td>
@@ -208,12 +392,16 @@ export default function Inventory() {
 
       {showForm && (
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <h2>{formMode === 'edit' ? `Edit ${form.name}` : 'Add new part'}</h2>
             <form onSubmit={handleFormSubmit}>
               <div className="form-row">
                 <div className="form-group"><label>Name</label><input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required /></div>
                 <div className="form-group"><label>SKU</label><input value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} required /></div>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Serial number</label><input value={form.serial_number} onChange={(e) => setForm((f) => ({ ...f, serial_number: e.target.value }))} placeholder="Optional" /></div>
+                <div className="form-group"><label>Brand</label><input value={form.brand} onChange={(e) => setForm((f) => ({ ...f, brand: e.target.value }))} placeholder="e.g. Bosch, Michelin" /></div>
               </div>
               <div className="form-row">
                 <div className="form-group">
@@ -232,6 +420,41 @@ export default function Inventory() {
                 </div>
                 <div className="form-group"><label>Unit price (MK)</label><input type="number" value={form.unit_price} onChange={(e) => setForm((f) => ({ ...f, unit_price: e.target.value }))} required /></div>
               </div>
+
+              {form.category.trim() && (
+                <div className="form-group">
+                  <label>Filters for {form.category.trim()}</label>
+                  {formFilterTypes.length === 0 ? (
+                    <p style={{ ...MUTED, margin: '4px 0 0' }}>
+                      No filters set up for this category yet. Use "Manage filters" to add some.
+                    </p>
+                  ) : (
+                    formFilterTypes.map((type) => (
+                      <div key={type.id} style={{ marginTop: 8 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{type.name}</div>
+                        {type.options.length === 0 ? (
+                          <span style={MUTED}>No options yet.</span>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 4 }}>
+                            {type.options.map((opt) => (
+                              <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 400 }}>
+                                <input
+                                  type="checkbox"
+                                  style={{ width: 'auto' }}
+                                  checked={form.filter_option_ids.includes(opt.id)}
+                                  onChange={() => toggleFormOption(opt.id)}
+                                />
+                                {opt.value}
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
               <div className="form-group"><label>Description</label><textarea rows={2} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} /></div>
               {formMode === 'add' ? (
                 <div className="form-row">
@@ -262,6 +485,97 @@ export default function Inventory() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {manageOpen && (
+        <div className="modal-backdrop" onClick={() => setManageOpen(false)}>
+          <div className="modal" style={{ maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2>Manage filters</h2>
+            <p style={{ ...MUTED, marginTop: 0 }}>
+              Filters are set up per category. Customers only see them after clicking Filters on that category's page.
+            </p>
+
+            <div className="form-group">
+              <label>Category</label>
+              <input
+                list="manage-category-options"
+                value={mfCategory}
+                onChange={(e) => setMfCategory(e.target.value)}
+                placeholder="Pick or type a category"
+              />
+              <datalist id="manage-category-options">
+                {existingCategories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+            </div>
+
+            {mfCategory.trim() && (
+              <>
+                <form onSubmit={addFilterType} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <input
+                    value={newTypeName}
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                    placeholder="New filter type, e.g. Brand, Size, Vehicle Make"
+                  />
+                  <button type="submit" className="btn btn-primary" disabled={!newTypeName.trim()}>Add filter</button>
+                </form>
+
+                {mfTypes.length === 0 && (
+                  <p style={MUTED}>No filters for this category yet.</p>
+                )}
+
+                {mfTypes.map((type) => (
+                  <div key={type.id} style={{ border: '1px solid #e3e5e8', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <strong>{type.name}</strong>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => deleteFilterType(type)}>Delete filter</button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '10px 0' }}>
+                      {type.options.length === 0 && <span style={MUTED}>No options yet.</span>}
+                      {type.options.map((opt) => (
+                        <span
+                          key={opt.id}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 999, background: '#f1f1f1', fontSize: '0.85rem' }}
+                        >
+                          {opt.value}
+                          <button
+                            type="button"
+                            onClick={() => deleteFilterOption(opt)}
+                            title="Delete option"
+                            style={{ border: 0, background: 'transparent', cursor: 'pointer', fontSize: '1rem', lineHeight: 1 }}
+                          >
+                            &times;
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        value={newOptionValues[type.id] || ''}
+                        onChange={(e) => setNewOptionValues((cur) => ({ ...cur, [type.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addFilterOption(type.id);
+                          }
+                        }}
+                        placeholder={`Add a ${type.name} option`}
+                      />
+                      <button type="button" className="btn btn-outline" onClick={() => addFilterOption(type.id)}>Add</button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+
+            <div className="modal-actions">
+              <button type="button" className="btn btn-primary" onClick={() => setManageOpen(false)}>Done</button>
+            </div>
           </div>
         </div>
       )}
