@@ -91,6 +91,11 @@ try {
         case 'inventory':
             match (true) {
                 $method === 'GET' && $id === null && $action === null => InventoryController::list(),
+                $method === 'GET' && $action === 'filters' => InventoryController::filters(),
+                $method === 'POST' && $action === 'filter-types' && $id === null => InventoryController::createFilterType($body),
+                $method === 'POST' && $action === 'filter-options' && $id === null => InventoryController::createFilterOption($body),
+                $method === 'DELETE' && $action === 'filter-type' && $id => InventoryController::deleteFilterType($id),
+                $method === 'DELETE' && $action === 'filter-option' && $id => InventoryController::deleteFilterOption($id),
                 $method === 'GET' && $action === 'low-stock' => InventoryController::lowStock(),
                 $method === 'POST' && $id === null => InventoryController::create($body),
                 $method === 'POST' && $action === 'stock-in' && $id => InventoryController::stockIn($id, $body),
