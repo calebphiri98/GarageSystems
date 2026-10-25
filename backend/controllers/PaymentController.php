@@ -50,7 +50,7 @@ class PaymentController
 
         // Windows PHP often has no CA bundle - set CURL_CA_BUNDLE in .env if you get an SSL error.
         $ca = env('CURL_CA_BUNDLE');
-        if ($ca) {
+        if ($ca && is_file($ca)) {
             $opts[CURLOPT_CAINFO] = $ca;
         }
 
