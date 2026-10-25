@@ -167,6 +167,7 @@ try {
         case 'reports':
             match (true) {
                 $action === 'summary' && $method === 'GET' => ReportController::summary(),
+                $action === 'overview' && $method === 'GET' => AdminReportController::overview(),
                 $action === 'audit-log' && $method === 'GET' => ReportController::auditLog(),
                 $action === 'audit-log' && $method === 'DELETE' => ReportController::clearAuditLog(),
                 $action === 'audit-log-count' && $method === 'GET' => ReportController::countAuditLog(),
