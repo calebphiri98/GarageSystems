@@ -14,6 +14,7 @@ import CustomerJobs from './pages/customer/Jobs/Jobs';
 import CustomerOrders from './pages/customer/Orders/Orders';
 import CustomerOrderCategory from './pages/customer/Orders/CategoryOrders';
 import CustomerInvoices from './pages/customer/Invoices/Invoices';
+import PaymentResult from './pages/customer/Payment/PaymentResult';
 
 import AdminDashboard from './pages/admin/Dashboard/Dashboard';
 import AdminAppointments from './pages/admin/Appointments/Appointments';
@@ -79,6 +80,11 @@ export default function App() {
           <Route path="/customer/orders/:category" element={
             <ProtectedRoute roles={['customer']}>
               <DashboardLayout role="customer" title="Order Parts"><CustomerOrderCategory /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/customer/payment/result/:txRef" element={
+            <ProtectedRoute roles={['customer']}>
+              <DashboardLayout role="customer" title="Payment"><PaymentResult /></DashboardLayout>
             </ProtectedRoute>
           } />
           <Route path="/customer/invoices" element={
