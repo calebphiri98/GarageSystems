@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../../api/api';
 import './Orders.css';
 import './CategoryFilters.css';
@@ -10,6 +10,7 @@ export default function CategoryOrders() {
   const { category } = useParams();
   const categoryLabel = decodeURIComponent(category || '');
   const isOther = categoryLabel === OTHER_CATEGORY;
+  const navigate = useNavigate();
 
   const [parts, setParts] = useState([]);
   const [cart, setCart] = useState({});
@@ -117,7 +118,7 @@ export default function CategoryOrders() {
 
     try {
       await api.post('/orders', { items });
-      setMessage('Order submitted successfully.');
+      navigate('/customer/orders', { state: { message: 'Order placed. Click Pay now on your order to pay and send it for approval.' } });
       setCart({});
       await loadParts();
     } catch (err) {
