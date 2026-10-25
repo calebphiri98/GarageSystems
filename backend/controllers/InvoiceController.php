@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Audit.php';
 require_once __DIR__ . '/../middleware/auth.php';
+require_once __DIR__ . '/../helpers/InvoiceHelper.php';
 
 class InvoiceController
 {
@@ -57,27 +58,13 @@ class InvoiceController
         require_role($payload, ['admin', 'manager']);
 
         $db = Database::connect();
-        $order = $db->prepare('SELECT * FROM orders WHERE id = :id');
-        $order->execute([':id' => $orderId]);
-        $orderRow = $order->fetch();
-        if (!$orderRow) {
-            Response::error('Order not found.', 404);
+        try {
+            $invoice = InvoiceHelper::ensureForOrder($db, $orderId);
+        } catch (RuntimeException $e) {
+            Response::error($e->getMessage(), 404);
         }
 
-        $items = $db->prepare('SELECT SUM(quantity * unit_price) AS total FROM order_items WHERE order_id = :id');
-        $items->execute([':id' => $orderId]);
-        $subtotal = (float) ($items->fetch()['total'] ?? 0);
-        $invoiceNumber = 'INV-' . date('Ymd') . '-' . str_pad((string) random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-
-        $stmt = $db->prepare(
-            "INSERT INTO invoices (invoice_number, source_type, order_id, customer_id, subtotal, discount, total, status)
-             VALUES (:num, 'order', :oid, :cid, :subtotal, 0, :subtotal, 'Unpaid') RETURNING id"
-        );
-        $stmt->execute([':num' => $invoiceNumber, ':oid' => $orderId, ':cid' => $orderRow['customer_id'], ':subtotal' => $subtotal]);
-        $id = $stmt->fetch()['id'];
-
-        Audit::log($payload['id'], $payload['role'], 'Generated invoice from order', 'invoices', $id);
-        Response::success(['id' => $id, 'invoice_number' => $invoiceNumber], 'Invoice generated.', 201);
+        Response::success(['id' => $invoice['id'], 'invoice_number' => $invoice['invoice_number']], 'Invoice ready.', 201);
     }
 
     public static function list(): void
