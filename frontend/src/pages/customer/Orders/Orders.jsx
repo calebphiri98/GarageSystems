@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import api from '../../../api/api';
+import { startPayment } from '../../../api/payments';
 import './Orders.css';
 
 const STATUS_BADGE = {
@@ -14,14 +15,29 @@ const STATUS_BADGE = {
 
 const OTHER_CATEGORY = 'Other';
 
+/** Friendly label that combines order status with payment status. */
+function statusLabel(order) {
+  if (order.status === 'Pending') {
+    return order.invoice_status === 'Paid' ? 'Paid - awaiting approval' : 'Awaiting payment';
+  }
+  return order.status;
+}
+
+function statusClass(order) {
+  if (order.status === 'Pending' && order.invoice_status === 'Paid') return 'badge-info';
+  return STATUS_BADGE[order.status] || 'badge-neutral';
+}
+
 export default function Orders() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [parts, setParts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(location.state?.message || '');
   const [error, setError] = useState('');
   const [cancellingId, setCancellingId] = useState(null);
+  const [payingId, setPayingId] = useState(null);
   const [search, setSearch] = useState('');
 
   const loadParts = async () => {
@@ -84,6 +100,18 @@ export default function Orders() {
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [parts]);
+
+  const payNow = async (order) => {
+    setPayingId(order.id);
+    setMessage('');
+    setError('');
+    try {
+      await startPayment({ order_id: order.id });
+    } catch (err) {
+      setError(err?.response?.data?.message || err.message || 'Could not start payment.');
+      setPayingId(null);
+    }
+  };
 
   const cancelOrder = async (id) => {
     setCancellingId(id);
@@ -173,7 +201,7 @@ export default function Orders() {
         <div className="section-header">
           <div>
             <h2>My Orders</h2>
-            <p>View and manage your submitted orders.</p>
+            <p>Pay for your orders here. Once paid, the garage manager approves them.</p>
           </div>
         </div>
 
@@ -183,69 +211,82 @@ export default function Orders() {
           </div>
         ) : (
           <div className="orders-list">
-            {orders.map((order) => (
-              <div className="order-card" key={order.id}>
-                <div className="order-card-header">
-                  <div>
-                    <strong>Order #{order.id}</strong>
-                    <span>
-                      {order.created_at
-                        ? new Date(order.created_at).toLocaleString()
-                        : ''}
+            {orders.map((order) => {
+              const paid = Number(order.amount_paid || 0);
+              const unpaid = order.status === 'Pending' && order.invoice_status !== 'Paid';
+
+              return (
+                <div className="order-card" key={order.id}>
+                  <div className="order-card-header">
+                    <div>
+                      <strong>Order #{order.id}</strong>
+                      <span>
+                        {order.created_at
+                          ? new Date(order.created_at).toLocaleString()
+                          : ''}
+                        {order.invoice_number ? ` | Invoice ${order.invoice_number}` : ''}
+                      </span>
+                    </div>
+
+                    <span className={`status-badge ${statusClass(order)}`}>
+                      {statusLabel(order)}
                     </span>
                   </div>
 
-                  <span
-                    className={`status-badge ${
-                      STATUS_BADGE[order.status] || 'badge-neutral'
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-                </div>
+                  {order.items && order.items.length > 0 && (
+                    <div className="order-items">
+                      {order.items.map((item, index) => (
+                        <div className="order-item" key={item.id || index}>
+                          <span>
+                            {item.part_name || item.name}
+                          </span>
 
-                {order.items && order.items.length > 0 && (
-                  <div className="order-items">
-                    {order.items.map((item, index) => (
-                      <div className="order-item" key={item.id || index}>
-                        <span>
-                          {item.part_name || item.name}
-                        </span>
+                          <span>
+                            {item.quantity} x MK{' '}
+                            {Number(
+                              item.unit_price || item.price || 0
+                            ).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                        <span>
-                          {item.quantity} × MK{' '}
-                          {Number(
-                            item.unit_price || item.price || 0
-                          ).toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="order-card-footer">
+                    {order.total_amount !== undefined && (
+                      <strong>
+                        Total: MK {Number(order.total_amount).toLocaleString()}
+                        {paid > 0 ? ` (paid MK ${paid.toLocaleString()})` : ''}
+                      </strong>
+                    )}
+
+                    {unpaid && (
+                      <button
+                        type="button"
+                        className="submit-order-button"
+                        disabled={payingId === order.id}
+                        onClick={() => payNow(order)}
+                      >
+                        {payingId === order.id ? 'Redirecting...' : 'Pay now'}
+                      </button>
+                    )}
+
+                    {order.status === 'Pending' && paid <= 0 && (
+                      <button
+                        type="button"
+                        className="cancel-order-button"
+                        disabled={cancellingId === order.id}
+                        onClick={() => cancelOrder(order.id)}
+                      >
+                        {cancellingId === order.id
+                          ? 'Cancelling...'
+                          : 'Cancel Order'}
+                      </button>
+                    )}
                   </div>
-                )}
-
-                <div className="order-card-footer">
-                  {order.total_amount !== undefined && (
-                    <strong>
-                      Total: MK{' '}
-                      {Number(order.total_amount).toLocaleString()}
-                    </strong>
-                  )}
-
-                  {order.status === 'Pending' && (
-                    <button
-                      type="button"
-                      className="cancel-order-button"
-                      disabled={cancellingId === order.id}
-                      onClick={() => cancelOrder(order.id)}
-                    >
-                      {cancellingId === order.id
-                        ? 'Cancelling...'
-                        : 'Cancel Order'}
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
