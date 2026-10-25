@@ -1,4 +1,5 @@
 <?php
+ini_set('display_errors', '0');
 require_once __DIR__ . '/config/cors.php';
 require_once __DIR__ . '/config/env.php';
 
@@ -142,6 +143,15 @@ try {
                 $method === 'POST' && $action === 'from-order' && $id => InvoiceController::createFromOrder($id),
                 $method === 'POST' && $action === 'pay' && $id => InvoiceController::recordPayment($id, $body),
                 $method === 'PUT' && $action === 'cancel' && $id => InvoiceController::cancel($id, $body),
+                default => Response::error('Route not found.', 404),
+            };
+            break;
+
+        case 'payments':
+            match (true) {
+                $method === 'POST' && $action === 'initiate' => PaymentController::initiate($body),
+                $method === 'POST' && $action === 'verify' => PaymentController::verify($body),
+                $method === 'POST' && $action === 'webhook' => PaymentController::webhook(),
                 default => Response::error('Route not found.', 404),
             };
             break;
