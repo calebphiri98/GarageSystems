@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Audit.php';
+require_once __DIR__ . '/../helpers/MailEvents.php';
 require_once __DIR__ . '/../middleware/auth.php';
 
 class AppointmentController
@@ -39,6 +40,7 @@ class AppointmentController
         $id = $stmt->fetch()['id'];
 
         Audit::log($payload['id'], 'customer', 'Requested appointment', 'appointments', $id);
+        MailEvents::newAppointment($db, (int) $id);
         Response::success(['id' => $id], 'Appointment requested. Awaiting confirmation.', 201);
     }
 
@@ -96,6 +98,7 @@ class AppointmentController
 
         Audit::log($payload['id'], $payload['role'], "Appointment status -> $status", 'appointments', $id, ['status' => $appt['status']], ['status' => $status]);
 
+        if ($status === 'Confirmed' && $appt['status'] !== 'Confirmed') { MailEvents::appointmentConfirmed($db, $id); }
         Response::success([], "Appointment marked as $status.");
     }
 
