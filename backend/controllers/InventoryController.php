@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Audit.php';
+require_once __DIR__ . '/../helpers/MailEvents.php';
 require_once __DIR__ . '/../middleware/auth.php';
 
 class InventoryController
@@ -484,6 +485,7 @@ class InventoryController
             'reason' => $reason
         ]);
 
+        if ($qty < 0) { MailEvents::lowStock($db, $id, (int) $row['quantity']); }
         Response::success([], 'Stock adjusted.');
     }
 
