@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/env.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Audit.php';
+require_once __DIR__ . '/../helpers/MailEvents.php';
 require_once __DIR__ . '/../middleware/auth.php';
 
 class JobController
@@ -340,6 +341,7 @@ class JobController
         $upd->execute([':by' => $payload['id'], ':id' => $id]);
 
         Audit::log($payload['id'], $payload['role'], 'Verified completed job', 'job_cards', $id);
+        MailEvents::jobReady($db, $id);
         Response::success([], 'Job verified. Vehicle marked Ready for Collection.');
     }
 
@@ -413,6 +415,7 @@ class JobController
         }
 
         Audit::log($payload['id'], $payload['role'], 'Recorded part used on job', 'job_parts', $jobId);
+        MailEvents::lowStock($db, (int) $partId, (int) $partRow['quantity']);
         Response::success([], 'Part usage recorded and stock updated.');
     }
 }
