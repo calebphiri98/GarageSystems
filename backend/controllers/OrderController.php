@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Audit.php';
+require_once __DIR__ . '/../helpers/MailEvents.php';
 require_once __DIR__ . '/../helpers/InvoiceHelper.php';
 require_once __DIR__ . '/../middleware/auth.php';
 
@@ -313,6 +314,8 @@ class OrderController
             }
 
             self::notify($db, (int) $orderRow['customer_id'], "Your order #$id has been confirmed. We will let you know when it is ready for collection.");
+            MailEvents::orderConfirmed($db, $id);
+            foreach ($rows as $row) { MailEvents::lowStock($db, (int) $row['part_id'], (int) $row['stock']); }
         } else {
             $upd = $db->prepare('UPDATE orders SET status = :status, reviewed_by = :by WHERE id = :id');
             $upd->execute([':status' => 'Rejected', ':by' => $payload['id'], ':id' => $id]);
@@ -352,6 +355,7 @@ class OrderController
         $upd->execute([':status' => $status, ':id' => $id]);
 
         Audit::log($payload['id'], $payload['role'], "Order status -> $status", 'orders', $id);
+        if ($status === 'Ready for Collection') { MailEvents::orderReady($db, $id); }
         Response::success([], "Order marked $status.");
     }
 }
