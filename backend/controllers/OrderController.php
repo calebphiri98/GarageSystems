@@ -93,7 +93,7 @@ class OrderController
         }
 
         $isOwner = $payload['role'] === 'customer' && (int) $orderRow['customer_id'] === (int) $payload['id'];
-        $isStaff = in_array($payload['role'], ['admin', 'manager'], true);
+        $isStaff = false;
         if (!$isOwner && !$isStaff) {
             Response::error('You do not have permission to edit this order.', 403);
         }
@@ -167,7 +167,7 @@ class OrderController
         }
 
         $isOwner = $payload['role'] === 'customer' && (int) $orderRow['customer_id'] === (int) $payload['id'];
-        $isStaff = in_array($payload['role'], ['admin', 'manager'], true);
+        $isStaff = false;
         if (!$isOwner && !$isStaff) {
             Response::error('You do not have permission to cancel this order.', 403);
         }
