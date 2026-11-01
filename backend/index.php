@@ -77,6 +77,7 @@ try {
                 $method === 'PUT' && $action === 'mechanic-update' && $id => JobController::updateByMechanic($id, $body),
                 $method === 'POST' && $action === 'request-approval' && $id => JobController::requestApproval($id, $body),
                 $method === 'POST' && $action === 'use-part' && $id => JobController::usePart($id, $body),
+                $method === 'POST' && $action === 'record-service' && $id => JobController::recordService($id, $body),
                 $method === 'POST' && $action === 'verify' && $id => JobController::verify($id),
                 $method === 'POST' && $action === 'close' && $id => JobController::closeJob($id),
                 default => Response::error('Route not found.', 404),
@@ -187,4 +188,3 @@ try {
 } catch (Throwable $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
-
