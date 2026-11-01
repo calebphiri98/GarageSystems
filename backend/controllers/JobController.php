@@ -202,6 +202,10 @@ class JobController
         $parts->execute([':id' => $id]);
         $job['parts_used'] = $parts->fetchAll();
 
+        $serviceRows = $db->prepare('SELECT js.*, s.name AS service_name FROM job_services js JOIN services s ON s.id = js.service_id WHERE js.job_id = :id ORDER BY js.id');
+        $serviceRows->execute([':id' => $id]);
+        $job['services_recorded'] = $serviceRows->fetchAll();
+
         $approvals = $db->prepare('SELECT * FROM job_approvals WHERE job_id = :id ORDER BY requested_at DESC');
         $approvals->execute([':id' => $id]);
         $job['approvals'] = $approvals->fetchAll();
@@ -370,6 +374,66 @@ class JobController
     }
 
     /** Record parts used on a job (updates inventory too). */
+    public static function recordService(int $jobId, array $body): void
+    {
+        $payload = require_auth();
+        require_role($payload, ['admin', 'manager']);
+
+        $serviceId = filter_var($body['service_id'] ?? null, FILTER_VALIDATE_INT);
+        $quantity = filter_var($body['quantity'] ?? null, FILTER_VALIDATE_INT);
+        $price = $body['unit_price'] ?? null;
+        if (!$serviceId || !$quantity || $quantity < 1 || !is_numeric($price) || (float) $price < 0 || (float) $price > 9999999999) {
+            Response::error('A service, positive whole-number quantity and valid charge are required.', 422);
+        }
+
+        $db = Database::connect();
+        $db->beginTransaction();
+        try {
+            $job = $db->prepare('SELECT id, status FROM job_cards WHERE id = :id FOR UPDATE');
+            $job->execute([':id' => $jobId]);
+            $row = $job->fetch();
+            if (!$row) {
+                $db->rollBack();
+                Response::error('Job not found.', 404);
+            }
+            if (in_array($row['status'], ['Collected'], true)) {
+                $db->rollBack();
+                Response::error('This job is already closed.', 422);
+            }
+            $existing = $db->prepare('SELECT id FROM invoices WHERE job_id = :id LIMIT 1');
+            $existing->execute([':id' => $jobId]);
+            if ($existing->fetch()) {
+                $db->rollBack();
+                Response::error('This job has already been invoiced.', 409);
+            }
+            $service = $db->prepare('SELECT id, name FROM services WHERE id = :id AND is_active = TRUE');
+            $service->execute([':id' => $serviceId]);
+            $serviceRow = $service->fetch();
+            if (!$serviceRow) {
+                $db->rollBack();
+                Response::error('Active service not found.', 422);
+            }
+            $description = trim((string) ($body['description'] ?? ''));
+            if ($description === '') {
+                $description = $serviceRow['name'];
+            }
+            if (mb_strlen($description) > 1000) {
+                $db->rollBack();
+                Response::error('Description is too long.', 422);
+            }
+            $insert = $db->prepare('INSERT INTO job_services (job_id, service_id, description, quantity, unit_price, recorded_by) VALUES (:job, :service, :description, :quantity, :price, :user) RETURNING id');
+            $insert->execute([':job' => $jobId, ':service' => $serviceId, ':description' => $description, ':quantity' => $quantity, ':price' => round((float) $price, 2), ':user' => $payload['id']]);
+            $entryId = $insert->fetchColumn();
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            throw $e;
+        }
+
+        Audit::log($payload['id'], $payload['role'], 'Recorded service on job', 'job_services', $entryId);
+        Response::success(['id' => $entryId], 'Service charge recorded.', 201);
+    }
+
     public static function usePart(int $jobId, array $body): void
     {
         $payload = require_auth();
@@ -384,6 +448,23 @@ class JobController
         $db = Database::connect();
         $db->beginTransaction();
         try {
+            $job = $db->prepare('SELECT status FROM job_cards WHERE id = :id FOR UPDATE');
+            $job->execute([':id' => $jobId]);
+            $jobRow = $job->fetch();
+            if (!$jobRow) {
+                $db->rollBack();
+                Response::error('Job not found.', 404);
+            }
+            if ($jobRow['status'] === 'Collected') {
+                $db->rollBack();
+                Response::error('Cannot record parts on a closed job.', 422);
+            }
+            $existingInvoice = $db->prepare('SELECT id FROM invoices WHERE job_id = :id LIMIT 1');
+            $existingInvoice->execute([':id' => $jobId]);
+            if ($existingInvoice->fetch()) {
+                $db->rollBack();
+                Response::error('Cannot record parts after an invoice is generated.', 409);
+            }
             $part = $db->prepare('SELECT * FROM parts WHERE id = :id FOR UPDATE');
             $part->execute([':id' => $partId]);
             $partRow = $part->fetch();
