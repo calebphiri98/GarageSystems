@@ -4,14 +4,27 @@ import './Dashboard.css';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
+  const [arrivalJobs, setArrivalJobs] = useState([]);
 
   useEffect(() => {
     api.get('/reports/summary').then((r) => setStats(r.data.data));
+    api.get('/jobs').then((r) => setArrivalJobs(Array.isArray(r.data.data) ? r.data.data : []));
   }, []);
 
   if (!stats) return <div className="page">Loading…</div>;
 
+  const now = new Date();
+  const today = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0')
+  ].join('-');
+
+  const arrivals = arrivalJobs.filter(j => String(j.opened_at || '').slice(0, 10) === today);
+
   const cards = [
+    { label: 'Vehicle visits today', value: arrivals.length },
+    { label: 'Different vehicles today', value: new Set(arrivals.map(j => j.vehicle_id)).size },
     { label: 'Pending appointments', value: stats.pending_appointments },
     { label: 'Active jobs', value: stats.active_jobs },
     { label: 'Awaiting approval', value: stats.jobs_awaiting_approval },
