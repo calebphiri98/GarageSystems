@@ -15,10 +15,15 @@ export default function AdminJobDetail() {
   const [message, setMessage] = useState('');
   const [labourCharge, setLabourCharge] = useState('');
   const [discount, setDiscount] = useState('0');
+  const [inventory, setInventory] = useState([]);
+  const [partId, setPartId] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [recordingPart, setRecordingPart] = useState(false);
 
   function load() {
     api.get(`/jobs/${id}`).then((r) => setJob(r.data.data));
-    api.get('/users/mechanics').then((r) => setMechanics(r.data.data));
+    api.get('/users/mechanics').then((r) => setMechanics(r.data.data)).catch(() => setError('Could not load mechanics.'));
+    api.get('/inventory').then((r) => setInventory(r.data.data)).catch(() => setError('Could not load inventory.'));
   }
 
   useEffect(load, [id]);
@@ -34,6 +39,34 @@ export default function AdminJobDetail() {
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Could not assign mechanic.');
+    }
+  }
+
+  async function recordPart(event) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    const qty = Number(quantity);
+
+    if (!partId || !Number.isInteger(qty) || qty < 1) {
+      setError('Select a part and enter a valid quantity.');
+      return;
+    }
+
+    setRecordingPart(true);
+    try {
+      await api.post(`/jobs/${id}/use-part`, {
+        part_id: Number(partId),
+        quantity: qty
+      });
+      setMessage('Part usage recorded and inventory updated.');
+      setPartId('');
+      setQuantity('1');
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not record the part.');
+    } finally {
+      setRecordingPart(false);
     }
   }
 
@@ -106,6 +139,33 @@ export default function AdminJobDetail() {
         </div>
 
         <div className="card">
+          <h2 className="section-title">Record resources used</h2>
+          <p className="muted-text">Record each spare part and quantity consumed. Stock is deducted automatically.</p>
+          {['Collected'].includes(job.status) ? (
+            <p>This job is closed. No further resources can be recorded here.</p>
+          ) : (
+            <form onSubmit={recordPart} className="garage-parts-form">
+              <div className="form-group">
+                <label>Spare part</label>
+                <select required value={partId} onChange={e => setPartId(e.target.value)}>
+                  <option value="">Select spare part</option>
+                  {inventory.map(p => (
+                    <option key={p.id} value={p.id} disabled={Number(p.quantity) < 1}>
+                      {p.name} — MK {Number(p.unit_price).toLocaleString()} — Stock: {p.quantity}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Quantity used</label>
+                <input type="number" min="1" step="1" value={quantity} onChange={e => setQuantity(e.target.value)} required />
+              </div>
+              <button className="btn btn-primary" type="submit" disabled={recordingPart || !partId}>
+                {recordingPart ? 'Recording...' : 'Record Part Usage'}
+              </button>
+            </form>
+          )}
+          <hr className="divider" />
           <h2 className="section-title">Allocate duty</h2>
           <p className="muted-text">Assign or reassign the mechanic responsible for this job. They'll be notified in-app and by email, and can't be double-booked against another active job in the same time window.</p>
           {job.mechanic_name && job.scheduled_start && (
