@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, dashboardPathForRole } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout/DashboardLayout';
@@ -26,7 +26,7 @@ import AdminServices from './pages/admin/Services/Services';
 import AdminOrders from './pages/admin/Orders/Orders';
 import AdminInvoices from './pages/admin/Invoices/Invoices';
 import AdminAuditLog from './pages/admin/AuditLog/AuditLog';
-import AdminReports from './pages/admin/Reports/Reports';
+
 
 import ManagerDashboard from './pages/manager/Dashboard/Dashboard';
 import ManagerApprovals from './pages/manager/Approvals/Approvals';
@@ -140,7 +140,7 @@ export default function App() {
               <DashboardLayout role="admin" title="Invoices & Payments"><AdminInvoices /></DashboardLayout>
             </ProtectedRoute>
           } />
-          <Route path="/admin/reports" element={<ProtectedRoute roles={['admin']}><DashboardLayout role="admin" title="System Reports"><AdminReports /></DashboardLayout></ProtectedRoute>} />
+
           <Route path="/admin/audit-log" element={
             <ProtectedRoute roles={['admin']}>
               <DashboardLayout role="admin" title="Audit Log"><AdminAuditLog /></DashboardLayout>
