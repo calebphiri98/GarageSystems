@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+﻿import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 const LINKS = {
@@ -19,7 +19,7 @@ const LINKS = {
     { to: '/admin/services', label: 'Services' },
     { to: '/admin/orders', label: 'Parts Orders' },
     { to: '/admin/invoices', label: 'Invoices & Payments' },
-    { to: '/admin/reports', label: 'Reports' },
+
     { to: '/admin/audit-log', label: 'Audit Log' },
   ],
   manager: [
