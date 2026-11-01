@@ -50,7 +50,7 @@ class AdminReportController
     public static function overview(): void
     {
         $payload = require_auth();
-        require_role($payload, ['admin']);
+        require_role($payload, ['manager']);
 
         $rawFrom = trim($_GET['from'] ?? '');
         $rawTo = trim($_GET['to'] ?? '');
