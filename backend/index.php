@@ -51,6 +51,7 @@ try {
             match (true) {
                 $method === 'POST' && $id === null => VehicleController::create($body),
                 $method === 'GET' && $id === null => VehicleController::list(),
+                $method === 'PUT' && $id !== null && $action === null => VehicleController::update($id, $body),
                 default => Response::error('Route not found.', 404),
             };
             break;
@@ -186,3 +187,4 @@ try {
 } catch (Throwable $e) {
     Response::error('Server error: ' . $e->getMessage(), 500);
 }
+
