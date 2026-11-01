@@ -3,3 +3,6 @@
   font-size: 0.85rem;
   margin: -8px 0 16px;
 }
+
+.invoice-breakdown { display: grid; gap: 8px; padding: 16px; background: #f8f8f8; border-radius: 8px; }
+.invoice-breakdown div { font-size: .88rem; }
