@@ -1,5 +1,6 @@
-﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, dashboardPathForRole } from './context/AuthContext';
+import GarageAssistant from './components/GarageAssistant/GarageAssistant';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout/DashboardLayout';
 
@@ -182,6 +183,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <GarageAssistant />
 
       </AuthProvider>
     </BrowserRouter>
