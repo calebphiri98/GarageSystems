@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, dashboardPathForRole } from '../../context/AuthContext';
 import './Login.css';
@@ -38,12 +38,19 @@ export default function Login() {
         replace: true,
       });
     } catch (err) {
+      console.error('Login diagnostic:', {
+        status: err.response?.status,
+        response: err.response?.data,
+        message: err.message,
+        name: err.name
+      });
+
       setError(
         err.response?.data?.message ||
-        'Login failed. Please check your credentials and try again.'
+        err.message ||
+        'Unable to complete login.'
       );
 
-      // Never leave the password visible after a failed attempt
       setPassword('');
     } finally {
       setLoading(false);
