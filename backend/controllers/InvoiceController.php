@@ -84,6 +84,7 @@ class InvoiceController
     public static function list(): void
     {
         $payload = require_auth();
+        require_role($payload, ['customer', 'admin', 'manager']);
         $db = Database::connect();
 
         if ($payload['role'] === 'customer') {
