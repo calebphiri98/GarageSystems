@@ -42,3 +42,18 @@
     grid-template-columns: 1fr;
   }
 }
+
+.garage-parts-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.garage-parts-form .form-group {
+  margin-bottom: 0;
+}
+
+.garage-parts-form select,
+.garage-parts-form input {
+  width: 100%;
+}
