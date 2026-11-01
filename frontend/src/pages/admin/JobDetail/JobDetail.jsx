@@ -19,11 +19,18 @@ export default function AdminJobDetail() {
   const [partId, setPartId] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [recordingPart, setRecordingPart] = useState(false);
+  const [services, setServices] = useState([]);
+  const [serviceId, setServiceId] = useState('');
+  const [serviceQuantity, setServiceQuantity] = useState('1');
+  const [servicePrice, setServicePrice] = useState('');
+  const [serviceDescription, setServiceDescription] = useState('');
+  const [savingService, setSavingService] = useState(false);
 
   function load() {
     api.get(`/jobs/${id}`).then((r) => setJob(r.data.data));
     api.get('/users/mechanics').then((r) => setMechanics(r.data.data)).catch(() => setError('Could not load mechanics.'));
     api.get('/inventory').then((r) => setInventory(r.data.data)).catch(() => setError('Could not load inventory.'));
+    api.get('/services').then((r) => setServices(r.data.data)).catch(() => setError('Could not load services.'));
   }
 
   useEffect(load, [id]);
@@ -67,6 +74,35 @@ export default function AdminJobDetail() {
       setError(err.response?.data?.message || 'Could not record the part.');
     } finally {
       setRecordingPart(false);
+    }
+  }
+
+  async function recordService(event) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    if (!serviceId || !Number.isInteger(Number(serviceQuantity)) || Number(serviceQuantity) < 1 || servicePrice === '' || Number(servicePrice) < 0) {
+      setError('Choose a service and enter a valid quantity and charge.');
+      return;
+    }
+    setSavingService(true);
+    try {
+      await api.post(`/jobs/${id}/record-service`, {
+        service_id: Number(serviceId),
+        quantity: Number(serviceQuantity),
+        unit_price: Number(servicePrice),
+        description: serviceDescription
+      });
+      setMessage('Service and charge recorded.');
+      setServiceId('');
+      setServiceQuantity('1');
+      setServicePrice('');
+      setServiceDescription('');
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Could not record service.');
+    } finally {
+      setSavingService(false);
     }
   }
 
@@ -126,6 +162,16 @@ export default function AdminJobDetail() {
           {job.work_performed && <p><strong>Work performed:</strong> {job.work_performed}</p>}
           {job.completion_notes && <p><strong>Completion notes:</strong> {job.completion_notes}</p>}
 
+          {job.services_recorded?.length > 0 && (
+            <>
+              <h3 className="subsection-title">Services and charges</h3>
+              <ul className="parts-list">
+                {job.services_recorded.map(s => (
+                  <li key={s.id}>{s.service_name} — {s.description} × {s.quantity} — MK {(Number(s.unit_price) * Number(s.quantity)).toLocaleString()}</li>
+                ))}
+              </ul>
+            </>
+          )}
           {job.parts_used?.length > 0 && (
             <>
               <h3 className="subsection-title">Parts used</h3>
@@ -139,6 +185,33 @@ export default function AdminJobDetail() {
         </div>
 
         <div className="card">
+          <h2 className="section-title">Record services performed</h2>
+          <p className="muted-text">Add each service and its charge before generating the invoice.</p>
+          {job.status !== 'Collected' ? (
+            <form className="garage-parts-form" onSubmit={recordService}>
+              <div className="form-group">
+                <label>Service</label>
+                <select value={serviceId} required onChange={e => {
+                  const chosen = services.find(s => String(s.id) === e.target.value);
+                  setServiceId(e.target.value);
+                  setServicePrice(chosen?.estimated_price == null ? '' : String(chosen.estimated_price));
+                }}>
+                  <option value="">Select service</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Description or work performed</label>
+                <textarea rows={2} value={serviceDescription} onChange={e => setServiceDescription(e.target.value)} placeholder="Optional details" />
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label>Quantity</label><input type="number" min="1" step="1" required value={serviceQuantity} onChange={e => setServiceQuantity(e.target.value)} /></div>
+                <div className="form-group"><label>Charge per unit (MK)</label><input type="number" min="0" step="0.01" required value={servicePrice} onChange={e => setServicePrice(e.target.value)} /></div>
+              </div>
+              <button className="btn btn-primary" type="submit" disabled={!serviceId || savingService}>{savingService ? 'Saving...' : 'Record Service'}</button>
+            </form>
+          ) : <p>Job already closed.</p>}
+          <hr className="divider" />
           <h2 className="section-title">Record resources used</h2>
           <p className="muted-text">Record each spare part and quantity consumed. Stock is deducted automatically.</p>
           {['Collected'].includes(job.status) ? (
@@ -210,7 +283,7 @@ export default function AdminJobDetail() {
             <>
               <h2 className="section-title">Generate invoice</h2>
               <div className="form-group">
-                <label>Labour charge (MK)</label>
+                <label>Additional labour charge (MK, optional)</label>
                 <input type="number" value={labourCharge} onChange={(e) => setLabourCharge(e.target.value)} placeholder="0" />
               </div>
               <div className="form-group">
