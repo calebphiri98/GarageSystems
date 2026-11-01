@@ -73,10 +73,10 @@ class AdminReportController
                 COALESCE(SUM(quantity * unit_price), 0) AS stock_value,
                 COUNT(*) FILTER (WHERE quantity = 0) AS out_of_stock,
                 COUNT(*) FILTER (WHERE quantity > 0 AND quantity <= min_stock_level) AS low_stock
-             FROM parts WHERE is_active = TRUE")[0];
+             FROM parts")[0];
 
         $products = self::rows($db, "SELECT id, name, sku, category, brand, quantity, min_stock_level, unit_price
-             FROM parts WHERE is_active = TRUE ORDER BY name");
+             FROM parts ORDER BY name");
 
         // ---- Most sold products (orders + parts used on jobs, both with a PAID invoice) ----
         $p = [];
