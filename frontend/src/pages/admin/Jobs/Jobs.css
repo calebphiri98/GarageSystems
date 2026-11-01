@@ -4,3 +4,83 @@
   gap: 10px;
   margin-top: 8px;
 }
+
+.garage-operations .garage-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.garage-operations .garage-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+}
+
+.garage-operations .garage-metric span {
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #666);
+}
+
+.garage-operations .garage-metric strong {
+  font-size: 2rem;
+}
+
+.garage-operations .garage-toolbar {
+  display: flex;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.garage-operations .garage-toolbar input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.garage-operations .garage-toolbar input,
+.garage-operations .garage-toolbar select {
+  padding: 11px 13px;
+  border: 1px solid #d4d4d4;
+  border-radius: 6px;
+}
+
+.garage-operations .garage-arrival-modal {
+  width: min(650px, calc(100vw - 32px));
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.garage-operations .garage-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 18px 0;
+}
+
+.garage-operations .garage-choice label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.garage-operations .garage-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 850px) {
+  .garage-operations .garage-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .garage-operations .garage-metrics,
+  .garage-operations .garage-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
