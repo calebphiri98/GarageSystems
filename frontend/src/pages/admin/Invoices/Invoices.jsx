@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import api from '../../../api/api';
 import './Invoices.css';
 
@@ -17,6 +17,7 @@ export default function AdminInvoices() {
   const [payModal, setPayModal] = useState(null);
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('Cash');
+  const [expanded, setExpanded] = useState(null);
 
   function load() {
     api.get('/invoices').then((r) => setInvoices(r.data.data));
@@ -58,7 +59,8 @@ export default function AdminInvoices() {
           <tbody>
             {invoices.length === 0 && <tr><td colSpan={7} className="empty-state">No invoices yet.</td></tr>}
             {invoices.map((inv) => (
-              <tr key={inv.id}>
+              <React.Fragment key={inv.id}>
+              <tr>
                 <td>{inv.invoice_number}</td>
                 <td>{inv.customer_name || '—'}</td>
                 <td>MK {Number(inv.total).toLocaleString()}</td>
@@ -66,11 +68,29 @@ export default function AdminInvoices() {
                 <td>MK {Number(inv.balance).toLocaleString()}</td>
                 <td><span className={`badge ${STATUS_BADGE[inv.status] || 'badge-neutral'}`}>{inv.status}</span></td>
                 <td>
+                  {inv.job_id && <button className="btn btn-outline btn-sm" onClick={() => setExpanded(expanded === inv.id ? null : inv.id)}>{expanded === inv.id ? 'Hide Details' : 'View Details'}</button>}
+                  {' '}
                   {inv.balance > 0 && inv.status !== 'Cancelled' && (
                     <button className="btn btn-primary btn-sm" onClick={() => setPayModal(inv)}>Record Payment</button>
                   )}
                 </td>
               </tr>
+              {expanded === inv.id && (
+                <tr key={`${inv.id}-items`}>
+                  <td colSpan={7}>
+                    <div className="invoice-breakdown">
+                      <strong>Invoice breakdown</strong>
+                      {(inv.service_items || []).map((item, i) => <div key={`s-${i}`}>{item.service_name}: {item.description} × {item.quantity} — MK {(Number(item.unit_price) * Number(item.quantity)).toLocaleString()}</div>)}
+                      {(inv.part_items || []).map((item, i) => <div key={`p-${i}`}>{item.part_name} × {item.quantity} — MK {(Number(item.unit_price) * Number(item.quantity)).toLocaleString()}</div>)}
+                      {Number(inv.additional_labour) > 0 && <div>Additional labour: MK {Number(inv.additional_labour).toLocaleString()}</div>}
+                      <div>Subtotal: MK {Number(inv.subtotal).toLocaleString()}</div>
+                      <div>Discount: MK {Number(inv.discount).toLocaleString()}</div>
+                      <strong>Total: MK {Number(inv.total).toLocaleString()}</strong>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
