@@ -5,10 +5,12 @@ import './Dashboard.css';
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [arrivalJobs, setArrivalJobs] = useState([]);
+  const [invoices, setInvoices] = useState([]);
 
   useEffect(() => {
     api.get('/reports/summary').then((r) => setStats(r.data.data));
     api.get('/jobs').then((r) => setArrivalJobs(Array.isArray(r.data.data) ? r.data.data : []));
+    api.get('/invoices').then((r) => setInvoices(Array.isArray(r.data.data) ? r.data.data : [])).catch(() => setInvoices([]));
   }, []);
 
   if (!stats) return <div className="page">Loading…</div>;
@@ -24,6 +26,8 @@ export default function AdminDashboard() {
 
   const cards = [
     { label: 'Vehicle visits today', value: arrivals.length },
+    { label: 'Total recorded payments (MK)', value: invoices.reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0).toLocaleString() },
+    { label: 'Outstanding invoice balances (MK)', value: invoices.reduce((sum, inv) => sum + (inv.status === 'Cancelled' ? 0 : Number(inv.balance || 0)), 0).toLocaleString() },
     { label: 'Different vehicles today', value: new Set(arrivals.map(j => j.vehicle_id)).size },
     { label: 'Pending appointments', value: stats.pending_appointments },
     { label: 'Active jobs', value: stats.active_jobs },
