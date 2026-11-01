@@ -9,6 +9,7 @@ class VehicleController
     public static function create(array $body): void
     {
         $payload = require_auth();
+        require_role($payload, ['customer', 'admin', 'manager']);
 
         $customerId = $payload['role'] === 'customer' ? $payload['id'] : ($body['customer_id'] ?? null);
         if (!$customerId) {
@@ -182,6 +183,7 @@ class VehicleController
     public static function list(): void
     {
         $payload = require_auth();
+        require_role($payload, ['customer', 'admin', 'manager']);
         $db = Database::connect();
 
         if ($payload['role'] === 'customer') {
