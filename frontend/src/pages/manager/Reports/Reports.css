@@ -1,3 +1,573 @@
-table td {
+.mgr-report .rpt-kpis {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mgr-report .rpt-kpi strong {
+  font-size: 1.5rem;
+}
+
+.mgr-subtitle {
+  margin-top: 0.35rem;
+  font-size: 0.88rem;
+  color: var(--rpt-muted);
+}
+
+.mgr-decisions {
+  display: flex;
+  flex-direction: column;
+}
+
+.mgr-decision {
+  --tone: #6b7280;
+  --tone-soft: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.25rem;
+  border-left: 4px solid var(--tone);
+  border-bottom: 1px solid #f1f2f4;
+  background: var(--tone-soft);
+}
+
+.mgr-decision:last-child {
+  border-bottom: 0;
+}
+
+.mgr-decision strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--rpt-ink);
+}
+
+.mgr-decision p {
+  margin: 0.2rem 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--rpt-text);
+}
+
+.mgr-decision-link {
+  flex-shrink: 0;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--rpt-line);
+  background: var(--rpt-surface);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--rpt-ink);
+  white-space: nowrap;
+}
+
+.mgr-decision-link:hover {
+  border-color: var(--tone);
+  color: var(--tone);
+}
+
+.mgr-decision-red {
+  --tone: #dc2626;
+  --tone-soft: #fef5f5;
+}
+
+.mgr-decision-amber {
+  --tone: #d97706;
+  --tone-soft: #fffaf0;
+}
+
+.mgr-decision-rose {
+  --tone: #e11d48;
+  --tone-soft: #fff5f7;
+}
+
+.mgr-decision-blue {
+  --tone: #2563eb;
+  --tone-soft: #f5f8ff;
+}
+
+.mgr-decision-green {
+  --tone: #16a34a;
+  --tone-soft: #f4fbf6;
+}
+
+.mgr-clip {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mgr-pulse-panel {
+  overflow: hidden;
+}
+
+.mgr-pulse {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.mgr-pulse-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 1.25rem;
+  border-right: 1px solid var(--rpt-line);
+}
+
+.mgr-pulse-item:last-child {
+  border-right: 0;
+}
+
+.mgr-pulse-item span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rpt-muted);
+}
+
+.mgr-pulse-item strong {
+  font-size: 1.25rem;
+  color: var(--rpt-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mgr-pulse-item small {
+  font-size: 0.75rem;
+  color: var(--rpt-muted);
+}
+
+@media (max-width: 1024px) {
+  .mgr-report .rpt-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mgr-pulse {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mgr-pulse-item:nth-child(2) {
+    border-right: 0;
+  }
+
+  .mgr-pulse-item:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--rpt-line);
+  }
+}
+
+@media (max-width: 640px) {
+  .mgr-report .rpt-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mgr-pulse {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mgr-pulse-item {
+    border-right: 0;
+    border-bottom: 1px solid var(--rpt-line);
+  }
+
+  .mgr-pulse-item:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media print {
+  .mgr-pulse {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mgr-report .rpt-kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* =========================================================
+   REVENUE MIX
+   ========================================================= */
+
+.mgr-mix {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.1rem 1.25rem 1.25rem;
+}
+
+.mgr-mix-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+}
+
+.mgr-mix-row > span {
   font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--rpt-text);
+}
+
+.mgr-mix-row > strong {
+  font-size: 1rem;
+  color: var(--rpt-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mgr-mix-row .rpt-bar {
+  grid-column: 1 / -1;
+}
+
+.mgr-mix-row > small {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--rpt-muted);
+}
+
+/* =========================================================
+   COMPLETED SERVICES
+   ========================================================= */
+
+.mgr-job-search {
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--rpt-line);
+  background: var(--rpt-soft);
+}
+
+.mgr-job-search input {
+  width: 100%;
+  max-width: 420px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--rpt-line);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--rpt-ink);
+  background: var(--rpt-surface);
+}
+
+.mgr-job-search input:focus {
+  outline: 2px solid rgba(220, 38, 38, 0.25);
+  border-color: var(--rpt-accent);
+}
+
+.mgr-jobs {
+  display: flex;
+  flex-direction: column;
+}
+
+.mgr-jobs-empty {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--rpt-muted);
+}
+
+.mgr-job {
+  border-bottom: 1px solid #f1f2f4;
+}
+
+.mgr-job:last-child {
+  border-bottom: 0;
+}
+
+.mgr-job-head {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1.6fr) minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mgr-job-head:hover {
+  background: var(--rpt-soft);
+}
+
+.mgr-job-open .mgr-job-head {
+  background: var(--rpt-soft);
+}
+
+.mgr-job-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #eef0f3;
+  color: var(--rpt-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mgr-job-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.mgr-job-main strong {
+  font-size: 0.88rem;
+  color: var(--rpt-ink);
+}
+
+.mgr-job-sub {
+  font-size: 0.78rem;
+  color: var(--rpt-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mgr-job-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-mech {
+  font-weight: 600;
+  color: var(--rpt-text);
+}
+
+.mgr-job-money {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.mgr-job-money strong {
+  font-size: 0.9rem;
+  color: var(--rpt-ink);
+}
+
+.mgr-job-money small {
+  font-size: 0.72rem;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-body {
+  padding: 0.25rem 1.25rem 1.4rem 3.1rem;
+  background: #fcfcfd;
+  border-top: 1px solid #f1f2f4;
+}
+
+.mgr-job-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem 1.5rem;
+  padding: 1rem 0;
+}
+
+.mgr-job-facts span {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-facts p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--rpt-text);
+}
+
+.mgr-job-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.mgr-job-tables h4,
+.mgr-job-approvals h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-tables .rpt-table {
+  border: 1px solid var(--rpt-line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mgr-job-tables .rpt-table th,
+.mgr-job-tables .rpt-table td {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.mgr-job-note {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-approvals {
+  margin-top: 1.1rem;
+}
+
+.mgr-job-approvals ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mgr-job-approvals li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--rpt-text);
+}
+
+.mgr-job-approvals li strong {
+  margin-left: auto;
+  color: var(--rpt-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mgr-job-invoice {
+  margin-top: 1.1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--rpt-line);
+  border-radius: 10px;
+  background: var(--rpt-surface);
+}
+
+.mgr-job-invoice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.82rem;
+  color: var(--rpt-text);
+}
+
+.mgr-job-invoice-head strong {
+  color: var(--rpt-ink);
+}
+
+.mgr-job-invoice dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+
+.mgr-job-invoice dl > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.mgr-job-invoice dt {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-invoice dd {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--rpt-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mgr-job-total dd {
+  font-size: 1rem;
+}
+
+.mgr-job-payments {
+  margin: 0.8rem 0 0;
+  padding: 0.7rem 0 0;
+  border-top: 1px dashed var(--rpt-line);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.mgr-job-payments li {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: var(--rpt-muted);
+}
+
+.mgr-job-payments li strong {
+  color: var(--rpt-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.mgr-job-noinvoice {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--rpt-muted);
+}
+
+@media (max-width: 760px) {
+  .mgr-job-head {
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    row-gap: 0.4rem;
+  }
+
+  .mgr-job-meta {
+    grid-column: 2 / -1;
+    flex-direction: row;
+    gap: 0.6rem;
+  }
+
+  .mgr-job-money {
+    align-items: flex-start;
+  }
+
+  .mgr-job-body {
+    padding-left: 1.25rem;
+  }
+}
+
+@media print {
+  .mgr-job-head {
+    cursor: default;
+  }
+
+  .mgr-job-toggle {
+    display: none;
+  }
+
+  .mgr-job-head {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto auto;
+  }
+
+  .mgr-job {
+    break-inside: avoid;
+  }
 }

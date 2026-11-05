@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../../api/api';
 
-export default function AuditLog() {
+export default function AuditLog({ canClear = true }) {
   const [logs, setLogs] = useState([]);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -75,8 +75,13 @@ export default function AuditLog() {
       <div className="page-header">
         <div>
           <h1>Audit Log</h1>
-          <p>View system activity and clear log entries between two dates.</p>
+          <p>
+            {canClear
+              ? 'View system activity and clear log entries between two dates.'
+              : 'Read-only record of system activity. Use the date filters to narrow the history.'}
+          </p>
         </div>
+        {!canClear && <span className="badge badge-neutral">Read-only</span>}
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
@@ -92,9 +97,11 @@ export default function AuditLog() {
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <button className="btn btn-outline" onClick={resetFilter}>Reset</button>
-        <button className="btn btn-danger" onClick={clearLogs} disabled={busy}>
-          {busy ? 'Checking...' : 'Clear Logs'}
-        </button>
+        {canClear && (
+          <button className="btn btn-danger" onClick={clearLogs} disabled={busy}>
+            {busy ? 'Checking...' : 'Clear Logs'}
+          </button>
+        )}
       </div>
 
 

@@ -1,26 +1,73 @@
 .navbar {
   height: var(--topbar-height);
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(8px);
   border-bottom: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 0 24px;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.navbar-logo {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.navbar-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.navbar-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.navbar-eyebrow {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+}
+
 .navbar-title {
-  font-size: 1.05rem;
+  font-size: 1.02rem;
   margin: 0;
   color: var(--color-navy);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .navbar-user {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 0 0 auto;
 }
 
 .navbar-avatar {
@@ -35,6 +82,7 @@
   font-weight: 700;
   font-size: 0.8rem;
   flex-shrink: 0;
+  border: 1px solid rgba(214, 69, 69, 0.18);
 }
 
 .navbar-user-info {
@@ -56,4 +104,5 @@
 @media (max-width: 560px) {
   .navbar { padding: 0 14px; }
   .navbar-user-info { display: none; }
+  .navbar-eyebrow { display: none; }
 }

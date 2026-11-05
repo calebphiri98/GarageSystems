@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, dashboardPathForRole } from './context/AuthContext';
-import GarageAssistant from './components/GarageAssistant/GarageAssistant';
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout/DashboardLayout';
 
@@ -15,7 +14,9 @@ import CustomerJobs from './pages/customer/Jobs/Jobs';
 import CustomerOrders from './pages/customer/Orders/Orders';
 import CustomerOrderCategory from './pages/customer/Orders/CategoryOrders';
 import CustomerInvoices from './pages/customer/Invoices/Invoices';
+import CustomerLiveChat from './pages/customer/LiveChat/LiveChat';
 import PaymentResult from './pages/customer/Payment/PaymentResult';
+import MockCheckout from './pages/customer/Payment/MockCheckout';
 
 import AdminDashboard from './pages/admin/Dashboard/Dashboard';
 import AdminAppointments from './pages/admin/Appointments/Appointments';
@@ -33,6 +34,7 @@ import ManagerDashboard from './pages/manager/Dashboard/Dashboard';
 import ManagerApprovals from './pages/manager/Approvals/Approvals';
 import ManagerUsers from './pages/manager/Users/Users';
 import ManagerReports from './pages/manager/Reports/Reports';
+import ManagerAuditLog from './pages/manager/AuditLog/AuditLog';
 
 import MechanicDashboard from './pages/mechanic/Dashboard/Dashboard';
 
@@ -84,6 +86,11 @@ export default function App() {
               <DashboardLayout role="customer" title="Order Parts"><CustomerOrderCategory /></DashboardLayout>
             </ProtectedRoute>
           } />
+          <Route path="/customer/payment/mock/:txRef" element={
+            <ProtectedRoute roles={['customer']}>
+              <DashboardLayout role="customer" title="Demo Checkout"><MockCheckout /></DashboardLayout>
+            </ProtectedRoute>
+          } />
           <Route path="/customer/payment/result/:txRef" element={
             <ProtectedRoute roles={['customer']}>
               <DashboardLayout role="customer" title="Payment"><PaymentResult /></DashboardLayout>
@@ -94,6 +101,12 @@ export default function App() {
               <DashboardLayout role="customer" title="Invoices"><CustomerInvoices /></DashboardLayout>
             </ProtectedRoute>
           } />
+          <Route path="/customer/live-chat" element={
+            <ProtectedRoute roles={['customer']}>
+              <DashboardLayout role="customer" title="Live Chat"><CustomerLiveChat /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+
 
           <Route path="/admin" element={
             <ProtectedRoute roles={['admin']}>
@@ -166,7 +179,12 @@ export default function App() {
           } />
           <Route path="/manager/reports" element={
             <ProtectedRoute roles={['manager']}>
-              <DashboardLayout role="manager" title="Reports & Audit Log"><ManagerReports /></DashboardLayout>
+              <DashboardLayout role="manager" title="Management Report"><ManagerReports /></DashboardLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/manager/audit-log" element={
+            <ProtectedRoute roles={['manager']}>
+              <DashboardLayout role="manager" title="Activity Log"><ManagerAuditLog /></DashboardLayout>
             </ProtectedRoute>
           } />
 
@@ -183,8 +201,6 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        <GarageAssistant />
-
       </AuthProvider>
     </BrowserRouter>
   );

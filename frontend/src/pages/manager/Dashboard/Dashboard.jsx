@@ -30,9 +30,12 @@ export default function ManagerDashboard() {
       <div className="page-header">
         <div>
           <h1>Manager Overview</h1>
-          <p>Full-business visibility across operations, staff and finances.</p>
+          <p>Prioritise approvals, collections and stock before they affect service.</p>
         </div>
-        <Link to="/manager/approvals" className="btn btn-primary">Review Approvals</Link>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link to="/manager/reports" className="btn btn-outline">Open Reports</Link>
+          <Link to="/manager/approvals" className="btn btn-primary">Review Approvals</Link>
+        </div>
       </div>
 
       <div className="grid grid-stats">

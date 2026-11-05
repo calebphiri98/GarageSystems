@@ -1,5 +1,6 @@
-import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth, dashboardPathForRole } from '../../context/AuthContext';
+import logo from '../../assets/logo.jpeg';
 import './Navbar.css';
 
 export default function Navbar({ title }) {
@@ -17,7 +18,15 @@ export default function Navbar({ title }) {
 
   return (
     <header className="navbar">
-      <h1 className="navbar-title">{title}</h1>
+      <div className="navbar-left">
+        <Link to={dashboardPathForRole(user?.role)} className="navbar-logo" aria-label="Uptown Garage dashboard">
+          <img src={logo} alt="Uptown Garage" />
+        </Link>
+        <div className="navbar-heading">
+          <span className="navbar-eyebrow">Uptown Garage</span>
+          <h1 className="navbar-title">{title}</h1>
+        </div>
+      </div>
       <div className="navbar-user">
         <div className="navbar-avatar">{initials}</div>
         <div className="navbar-user-info">

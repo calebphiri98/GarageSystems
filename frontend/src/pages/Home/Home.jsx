@@ -4,6 +4,7 @@ import api from '../../api/api';
 import PublicNavbar from '../../components/PublicNavbar/PublicNavbar';
 import './Home.css';
 import garageHero from '../../assets/garage-hero.jpg';
+import logo from '../../assets/logo.jpeg';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -13,10 +14,14 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     Promise.all([
       api.get('/services').catch(() => ({ data: { data: [] } })),
       api.get('/inventory').catch(() => ({ data: { data: [] } })),
     ]).then(([servicesRes, partsRes]) => {
+      if (!active) return;
+
       const servicesData = Array.isArray(servicesRes.data?.data)
         ? servicesRes.data.data
         : Array.isArray(servicesRes.data)
@@ -33,6 +38,8 @@ export default function Home() {
       setParts(partsData.slice(0, 8));
       setLoading(false);
     });
+
+    return () => { active = false; };
   }, []);
 
   function requireAccount(reason) {
@@ -41,12 +48,19 @@ export default function Home() {
     });
   }
 
+  function formatPrice(value) {
+    const amount = Number(value);
+    return Number.isFinite(amount) ? amount.toLocaleString() : '—';
+  }
+
   return (
     <div className="home-page">
 
       <PublicNavbar />
 
-    
+      {/* =====================================================
+          HERO
+      ====================================================== */}
       <section
         className="hero"
         style={{ '--hero-image': `url("${garageHero}")` }}
@@ -207,10 +221,7 @@ export default function Home() {
                       s.estimated_price !== undefined &&
                       s.estimated_price !== '' && (
                         <div className="catalog-price">
-                          From MK{' '}
-                          {Number(
-                            s.estimated_price
-                          ).toLocaleString()}
+                          From MK {formatPrice(s.estimated_price)}
                         </div>
                       )}
 
@@ -303,10 +314,7 @@ export default function Home() {
                     <h3>{p.name}</h3>
 
                     <div className="catalog-price">
-                      MK{' '}
-                      {Number(
-                        p.unit_price
-                      ).toLocaleString()}
+                      MK {formatPrice(p.unit_price)}
                     </div>
 
                     <span
@@ -365,7 +373,9 @@ export default function Home() {
 
       </section>
 
-   
+      {/* =====================================================
+          CALL TO ACTION
+      ====================================================== */}
       <section className="cta-section">
 
         <div className="cta-inner">
@@ -399,7 +409,9 @@ export default function Home() {
 
       </section>
 
-   
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
       <footer className="home-footer">
 
         <div className="home-footer-inner">
@@ -408,13 +420,9 @@ export default function Home() {
 
             <div className="footer-brand">
 
-              <span className="footer-brand-mark">
-                ⚙
-              </span>
+              <img className="footer-brand-mark" src={logo} alt="Uptown Garage" />
 
-              <span>
-                UPTOWN GARAGE
-              </span>
+              <span>UPTOWN GARAGE</span>
 
             </div>
 
@@ -464,8 +472,8 @@ export default function Home() {
             <h4>Contact</h4>
 
             <ul className="footer-list">
-              <li>📞 +265 999 000 000</li>
-              <li>✉ info@uptowngarage.example</li>
+              <li>📞 +265 998448212</li>
+              <li>✉ uptowngarage@gmail.com</li>
               <li>💬 WhatsApp bookings</li>
             </ul>
 

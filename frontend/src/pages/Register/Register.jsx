@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../api/api';
+import logo from '../../assets/logo.jpeg';
 import '../Login/Login.css';
 import './Register.css';
 
@@ -34,11 +35,29 @@ export default function Register() {
   return (
     <div className="auth-screen">
       <div className="auth-card register-card">
+        <Link to="/" className="auth-back-home">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5" />
+            <path d="M11 18l-6-6 6-6" />
+          </svg>
+          Back to home
+        </Link>
+
         <div className="auth-brand">
-          <span className="auth-brand-badge" aria-hidden="true">🔧</span>
-          <h1>Create your account</h1>
+          <div className="auth-brand-badge" aria-hidden="true">
+            <img src={logo} alt="" />
+          </div>
+
+          <div>
+            <h1>Uptown Garage</h1>
+            <span className="auth-brand-label">Customer Registration</span>
+          </div>
         </div>
-        <p className="auth-subtitle">Register as a customer to book services and order parts.</p>
+
+        <div className="auth-heading">
+          <h2>Create your account</h2>
+          <p>Register as a customer to book services and order parts.</p>
+        </div>
 
         {error && <div className="alert alert-error">{error}</div>}
         {success && <div className="alert alert-success">{success}</div>}

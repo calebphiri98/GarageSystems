@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import './PublicNavbar.css';
-import logo from '../../assets/logo.jpeg'
+import logo from '../../assets/logo.jpeg';
 
 export default function PublicNavbar() {
   return (
@@ -8,10 +8,6 @@ export default function PublicNavbar() {
       <div className="public-navbar-inner">
 
         <Link to="/" className="navbar-brand">
-          {/* Swap the spanner icon for your own logo image here.
-              Drop your logo file in src/assets and update the
-              import path above — everything else (sizing, the
-              rounded frame) stays the same. */}
           <span className="navbar-logo-mark">
             <img src={logo} alt="Uptown Garage logo" />
           </span>

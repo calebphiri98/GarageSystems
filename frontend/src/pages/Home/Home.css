@@ -9,6 +9,16 @@
   color: #111111;
 }
 
+/* The sticky public navbar would otherwise cover the top of the
+   section when the hero's "View Services" anchor jumps to #services. */
+.home-page [id] {
+  scroll-margin-top: 90px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 
 /* =========================================================
    HERO
@@ -130,7 +140,10 @@
    BUTTONS
    ========================================================= */
 
-.btn {
+/* Scoped to .home-page so these rules outrank the shared
+   .btn / .btn-primary / .btn-outline styles in global.css
+   (which use the red dashboard palette). */
+.home-page .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -158,11 +171,11 @@
     transform 0.2s ease;
 }
 
-.btn:hover {
+.home-page .btn:hover {
   transform: translateY(-1px);
 }
 
-.btn-primary {
+.home-page .btn-primary {
   background: #f28c28;
   border-color: #f28c28;
 
@@ -171,7 +184,7 @@
   box-shadow: 0 6px 18px rgba(242, 140, 40, 0.35);
 }
 
-.btn-primary:hover {
+.home-page .btn-primary:hover {
   background: #d96f0b;
   border-color: #d96f0b;
 
@@ -193,7 +206,7 @@
 /* "View Services" — previously only readable on hover.
    Gave it a solid fill + visible border so it reads clearly
    at rest, with the outline look reserved for hover. */
-.hero-outline {
+.home-page .hero-outline {
   background: rgba(255, 255, 255, 0.12);
   border: 1.5px solid rgba(255, 255, 255, 0.85);
 
@@ -202,7 +215,7 @@
   backdrop-filter: blur(2px);
 }
 
-.hero-outline:hover {
+.home-page .hero-outline:hover {
   background: #ffffff;
   border-color: #ffffff;
 
@@ -851,7 +864,7 @@
   margin-top: 38px;
 }
 
-.btn-outline-dark {
+.home-page .btn-outline-dark {
   background: transparent;
 
   border-color: #222222;
@@ -859,7 +872,7 @@
   color: #111111;
 }
 
-.btn-outline-dark:hover {
+.home-page .btn-outline-dark:hover {
   background: #111111;
 
   border-color: #111111;
@@ -917,7 +930,7 @@
   line-height: 1.6;
 }
 
-.cta-button {
+.home-page .cta-button {
   flex-shrink: 0;
 
   background: #111111;
@@ -927,7 +940,7 @@
   color: #ffffff;
 }
 
-.cta-button:hover {
+.home-page .cta-button:hover {
   background: #ffffff;
 
   border-color: #ffffff;
@@ -986,17 +999,17 @@
   width: 31px;
   height: 31px;
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
 
   border-radius: 50%;
 
-  background: #f28c28;
+  background: #ffffff;
 
-  color: #111111;
+  object-fit: cover;
 
-  font-size: 0.8rem;
+  padding: 1px;
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .footer-about {

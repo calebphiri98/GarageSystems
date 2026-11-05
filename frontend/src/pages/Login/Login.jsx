@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth, dashboardPathForRole } from '../../context/AuthContext';
+import logo from '../../assets/logo.jpeg';
 import './Login.css';
 
 export default function Login() {
@@ -74,9 +75,7 @@ export default function Login() {
         {/* Brand */}
         <div className="auth-brand">
           <div className="auth-brand-badge" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.1 2.1a1.5 1.5 0 0 1-2.1-2.1z" />
-            </svg>
+            <img src={logo} alt="" />
           </div>
 
           <div>

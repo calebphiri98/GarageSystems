@@ -20,8 +20,14 @@ $rawBody = file_get_contents('php://input');
 $body = json_decode($rawBody, true) ?: [];
 
 $resource = $segments[0] ?? '';
-$id = isset($segments[1]) && is_numeric($segments[1]) ? (int) $segments[1] : null;
-$action = $id !== null ? ($segments[2] ?? null) : ($segments[1] ?? null);
+$id = null;
+$action = $segments[1] ?? null;
+if (isset($segments[1]) && is_numeric($segments[1])) {
+    $id = (int) $segments[1];
+    $action = $segments[2] ?? null;
+} elseif (isset($segments[2]) && is_numeric($segments[2])) {
+    $id = (int) $segments[2];
+}
 
 try {
     switch ($resource) {
@@ -170,6 +176,9 @@ try {
             match (true) {
                 $action === 'summary' && $method === 'GET' => ReportController::summary(),
                 $action === 'overview' && $method === 'GET' => AdminReportController::overview(),
+                $action === 'manager' && ($segments[2] ?? null) === 'activity' && $method === 'GET' => ManagerActivityReportController::overview(),
+                $action === 'manager' && $method === 'GET' => ManagerReportController::overview(),
+                $action === 'manager-activity' && $method === 'GET' => ManagerActivityReportController::overview(),
                 $action === 'audit-log' && $method === 'GET' => ReportController::auditLog(),
                 $action === 'audit-log' && $method === 'DELETE' => ReportController::clearAuditLog(),
                 $action === 'audit-log-count' && $method === 'GET' => ReportController::countAuditLog(),

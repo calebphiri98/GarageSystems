@@ -92,6 +92,7 @@ CREATE TABLE parts (
   sku VARCHAR(50) UNIQUE NOT NULL,
   description TEXT,
   unit_price NUMERIC(12,2) NOT NULL DEFAULT 0,
+  cost_price NUMERIC(12,2) DEFAULT NULL,
   quantity INT NOT NULL DEFAULT 0,
   min_stock_level INT NOT NULL DEFAULT 5,
   created_at TIMESTAMP DEFAULT NOW()
