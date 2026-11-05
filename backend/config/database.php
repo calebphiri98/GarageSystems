@@ -18,7 +18,13 @@ class Database
         $pass = env('DB_PASS');
         $sslmode = env('DB_SSLMODE', 'require');
 
-        $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
+        // Older libpq builds (e.g. the one bundled with XAMPP on Windows) do not
+        // send SNI, so Neon cannot identify the endpoint. Passing the endpoint id
+        // explicitly keeps local PHP able to connect without a newer libpq.
+        $endpoint = trim((string) env('DB_ENDPOINT', ''));
+        $options = $endpoint !== '' ? ';options=endpoint=' . $endpoint : '';
+
+        $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}{$options}";
 
         try {
             self::$instance = new PDO($dsn, $user, $pass, [
@@ -27,6 +33,7 @@ class Database
                 PDO::ATTR_EMULATE_PREPARES => true,
             ]);
         } catch (PDOException $e) {
+            error_log('Database connection failed: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
