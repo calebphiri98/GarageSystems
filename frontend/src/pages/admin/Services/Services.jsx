@@ -4,6 +4,11 @@ import { uploadImage } from '../../../api/cloudinary';
 
 const EMPTY_FORM = { name: '', description: '', estimated_price: '', image_url: '' };
 
+function isServiceActive(service) {
+  const value = service?.is_active;
+  return value === true || value === 1 || value === '1' || value === 't' || value === 'true';
+}
+
 export default function Services() {
   const [services, setServices] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -17,7 +22,10 @@ export default function Services() {
   function load() {
     api
       .get('/services', { params: { all: 1 } })
-      .then((r) => setServices(Array.isArray(r.data?.data) ? r.data.data : []))
+      .then((r) => {
+        const rows = Array.isArray(r.data?.data) ? r.data.data : [];
+        setServices(rows.map((s) => ({ ...s, is_active: isServiceActive(s) })));
+      })
       .catch((err) => setError(err.response?.data?.message || 'Could not load services.'));
   }
 

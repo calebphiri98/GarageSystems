@@ -39,12 +39,23 @@ export default function AdminDashboard() {
     { label: 'Active mechanics', value: stats.total_mechanics },
   ];
 
+  const dateLabel = now.toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
   return (
-    <div className="page">
+    <div className="page admin-dashboard">
       <div className="page-header">
         <div>
           <h1>Admin Dashboard</h1>
           <p>Overview of today's garage operations.</p>
+        </div>
+        <div className="dashboard-date">
+          <span className="dashboard-date-dot" aria-hidden="true" />
+          {dateLabel}
         </div>
       </div>
 

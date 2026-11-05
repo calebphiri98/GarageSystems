@@ -75,7 +75,13 @@ class ServiceController
         $upd = $db->prepare(
             'UPDATE services SET name = :name, description = :desc, estimated_price = :price, is_active = :active, image_url = :image WHERE id = :id'
         );
-        $upd->execute([':name' => $name, ':desc' => $description, ':price' => $price, ':active' => $isActive, ':image' => $imageUrl, ':id' => $id]);
+        $upd->bindValue(':name', $name);
+        $upd->bindValue(':desc', $description);
+        $upd->bindValue(':price', $price);
+        $upd->bindValue(':active', $isActive, PDO::PARAM_BOOL);
+        $upd->bindValue(':image', $imageUrl);
+        $upd->bindValue(':id', $id, PDO::PARAM_INT);
+        $upd->execute();
 
         Audit::log($payload['id'], $payload['role'], 'Updated service', 'services', $id);
         Response::success([], 'Service updated.');

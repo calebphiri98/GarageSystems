@@ -1,1 +1,58 @@
-/* Uses shared .grid-stats / .stat-card styles from global.css */
+.admin-dashboard .grid-stats {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.admin-dashboard .stat-card {
+  padding: 22px 22px 20px;
+}
+
+.admin-dashboard .stat-card .stat-value {
+  font-size: clamp(1.6rem, 2.4vw, 2rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.admin-dashboard .stat-card .stat-label {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.dashboard-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dashboard-date-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .admin-dashboard .grid-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+
+  .admin-dashboard .stat-card {
+    padding: 16px;
+  }
+
+  .dashboard-date {
+    font-size: 0.76rem;
+    padding: 7px 12px;
+  }
+}
