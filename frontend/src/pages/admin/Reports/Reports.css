@@ -28,6 +28,27 @@
   flex-wrap: wrap;
 }
 
+.rpt-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rpt-muted);
+}
+
+.rpt-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  object-fit: contain;
+  background: #ffffff;
+  border: 1px solid var(--rpt-line);
+}
+
 .rpt-hero h1 {
   font-size: 1.75rem;
   letter-spacing: -0.02em;
@@ -501,11 +522,26 @@
 
   .rpt-print-header {
     display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.85rem;
     padding-bottom: 0.6rem;
     border-bottom: 2px solid var(--rpt-ink);
     font-size: 0.8rem;
+  }
+
+  .rpt-print-logo {
+    width: 56px;
+    height: 56px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: #ffffff;
+  }
+
+  .rpt-print-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
   }
 
   .rpt-print-header strong {

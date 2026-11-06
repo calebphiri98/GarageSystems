@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../../../api/api';
+import logo from '../../../assets/logo.jpeg';
 import './Reports.css';
 
 const mk = (n) => 'MK ' + Number(n || 0).toLocaleString();
@@ -188,13 +189,20 @@ export default function Reports() {
   return (
     <div className="page rpt">
       <div className="rpt-print-header">
-        <strong>Uptown Garage</strong>
-        <span>System Report - {periodText}</span>
-        <span>Generated {new Date(data.generated_at).toLocaleString()}</span>
+        <img className="rpt-print-logo" src={logo} alt="Uptown Garage logo" />
+        <div className="rpt-print-info">
+          <strong>Uptown Garage</strong>
+          <span>System Report - {periodText}</span>
+          <span>Generated {new Date(data.generated_at).toLocaleString()}</span>
+        </div>
       </div>
 
       <div className="rpt-hero">
         <div>
+          <div className="rpt-brand">
+            <img className="rpt-logo" src={logo} alt="Uptown Garage logo" />
+            <span>Uptown Garage</span>
+          </div>
           <h1>System Report</h1>
           <div className="rpt-meta">
             <span className="rpt-chip">Period: {periodText}</span>

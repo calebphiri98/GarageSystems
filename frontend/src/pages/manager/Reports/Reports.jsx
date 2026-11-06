@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../../../api/api';
+import logo from '../../../assets/logo.jpeg';
 import '../../admin/Reports/Reports.css';
 import './Reports.css';
 
@@ -393,13 +394,20 @@ export default function ManagerReports() {
   return (
     <div className="page rpt mgr-report">
       <div className="rpt-print-header">
-        <strong>Uptown Garage</strong>
-        <span>Business Report - {periodText}</span>
-        <span>Generated {new Date(data.generated_at).toLocaleString()}</span>
+        <img className="rpt-print-logo" src={logo} alt="Uptown Garage logo" />
+        <div className="rpt-print-info">
+          <strong>Uptown Garage</strong>
+          <span>Business Report - {periodText}</span>
+          <span>Generated {new Date(data.generated_at).toLocaleString()}</span>
+        </div>
       </div>
 
       <div className="rpt-hero">
         <div>
+          <div className="rpt-brand">
+            <img className="rpt-logo" src={logo} alt="Uptown Garage logo" />
+            <span>Uptown Garage</span>
+          </div>
           <h1>Business Report</h1>
           <p className="mgr-subtitle">
             What the business did in this period: every completed service and its activity,
