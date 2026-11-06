@@ -36,6 +36,8 @@ try {
                 $action === 'register' && $method === 'POST' => AuthController::register($body),
                 $action === 'login' && $method === 'POST' => AuthController::login($body),
                 $action === 'add-staff' && $method === 'POST' => AuthController::addStaff($body),
+                $action === 'forgot-password' && $method === 'POST' => AuthController::forgotPassword($body),
+                $action === 'reset-password' && $method === 'POST' => AuthController::resetPassword($body),
                 $action === 'me' && $method === 'GET' => AuthController::me(),
 
                 default => Response::error('Route not found.', 404),

@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../helpers/Response.php';
 require_once __DIR__ . '/../helpers/Jwt.php';
 require_once __DIR__ . '/../helpers/Audit.php';
+require_once __DIR__ . '/../helpers/Mailer.php';
 require_once __DIR__ . '/../middleware/auth.php';
 
 class AuthController
@@ -133,5 +134,162 @@ class AuthController
     {
         $payload = require_auth();
         Response::success(['user' => $payload]);
+    }
+
+    /**
+     * Public: request a password reset link. Always returns a generic message
+     * so callers cannot discover whether an email is registered.
+     */
+    public static function forgotPassword(array $body): void
+    {
+        $rawEmail = $body['email'] ?? '';
+        $email = is_string($rawEmail) ? strtolower(trim($rawEmail)) : '';
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            Response::error('Please enter a valid email address.');
+        }
+
+        $generic = 'If an account exists with that email address, password reset instructions have been sent. Please check your inbox.';
+        $db = Database::connect();
+
+        $stmt = $db->prepare('SELECT id, name, email, is_active FROM users WHERE email = :email');
+        $stmt->execute([':email' => $email]);
+        $user = $stmt->fetch();
+
+        if (!$user || !self::isActive($user['is_active'])) {
+            Response::success([], $generic);
+        }
+
+        // Rate limit: at most 3 reset requests per account every 10 minutes.
+        $since = gmdate('Y-m-d H:i:s', time() - 600);
+        $count = $db->prepare('SELECT COUNT(*) AS c FROM password_reset_tokens WHERE user_id = :id AND created_at > :since');
+        $count->execute([':id' => $user['id'], ':since' => $since]);
+        if ((int) $count->fetch()['c'] >= 3) {
+            Response::success([], $generic);
+        }
+
+        $ttl = (int) env('PASSWORD_RESET_TTL_MINUTES', 30);
+        if ($ttl < 5 || $ttl > 1440) {
+            $ttl = 30;
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
+        $now = gmdate('Y-m-d H:i:s');
+        $expires = gmdate('Y-m-d H:i:s', time() + ($ttl * 60));
+
+        // Any earlier unused tokens for this account stop working.
+        $invalidate = $db->prepare('UPDATE password_reset_tokens SET used_at = :now WHERE user_id = :id AND used_at IS NULL');
+        $invalidate->execute([':now' => $now, ':id' => $user['id']]);
+
+        $insert = $db->prepare(
+            'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at)
+             VALUES (:user_id, :token_hash, :expires_at, :created_at)'
+        );
+        $insert->execute([
+            ':user_id' => $user['id'],
+            ':token_hash' => $tokenHash,
+            ':expires_at' => $expires,
+            ':created_at' => $now,
+        ]);
+
+        Mailer::sendPasswordReset(
+            $user['email'],
+            $user['name'],
+            'reset-password?token=' . urlencode($token),
+            $ttl
+        );
+
+        Response::success([], $generic);
+    }
+
+    /**
+     * Public: complete a password reset using a single-use, time-limited token.
+     */
+    public static function resetPassword(array $body): void
+    {
+        $token = $body['token'] ?? '';
+        $password = $body['password'] ?? '';
+        $confirmation = $body['password_confirmation'] ?? $body['confirm_password'] ?? null;
+
+        if (!is_string($token) || strlen($token) < 32) {
+            Response::error('This password reset link is invalid or has expired.', 400);
+        }
+        if (!is_string($password) || ($confirmation !== null && !is_string($confirmation))) {
+            Response::error('Please provide a valid password.');
+        }
+        if ($confirmation !== null && $password !== $confirmation) {
+            Response::error('The two passwords do not match.');
+        }
+        $passwordError = self::passwordError($password);
+        if ($passwordError !== null) {
+            Response::error($passwordError);
+        }
+
+        $db = Database::connect();
+        $lookup = $db->prepare(
+            'SELECT t.id, t.user_id, t.expires_at, t.used_at, u.role
+             FROM password_reset_tokens t
+             JOIN users u ON u.id = t.user_id
+             WHERE t.token_hash = :token_hash'
+        );
+        $lookup->execute([':token_hash' => hash('sha256', $token)]);
+        $row = $lookup->fetch();
+
+        if (!$row || $row['used_at'] !== null || strtotime($row['expires_at'] . ' UTC') < time()) {
+            Response::error('This password reset link is invalid or has expired.', 400);
+        }
+
+        $newHash = password_hash($password, PASSWORD_DEFAULT);
+        $now = gmdate('Y-m-d H:i:s');
+
+        try {
+            $db->beginTransaction();
+
+            $useToken = $db->prepare('UPDATE password_reset_tokens SET used_at = :now WHERE id = :id AND used_at IS NULL');
+            $useToken->execute([':now' => $now, ':id' => $row['id']]);
+            if ($useToken->rowCount() < 1) {
+                $db->rollBack();
+                Response::error('This password reset link is invalid or has expired.', 400);
+            }
+
+            $update = $db->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+            $update->execute([':hash' => $newHash, ':id' => $row['user_id']]);
+
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            Response::error('Could not reset the password. Please try again.', 500);
+        }
+
+        Audit::log($row['user_id'], $row['role'], 'Password reset via email link', 'users', $row['user_id']);
+
+        Response::success([], 'Your password has been reset successfully. You can now sign in using your new password.');
+    }
+
+    private static function passwordError(string $password): ?string
+    {
+        if (strlen($password) < 8) {
+            return 'Password must be at least 8 characters long.';
+        }
+        if (!preg_match('/[A-Z]/', $password)) {
+            return 'Password must include at least one uppercase letter.';
+        }
+        if (!preg_match('/[a-z]/', $password)) {
+            return 'Password must include at least one lowercase letter.';
+        }
+        if (!preg_match('/[0-9]/', $password)) {
+            return 'Password must include at least one number.';
+        }
+        if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+            return 'Password must include at least one special character.';
+        }
+        return null;
+    }
+
+    private static function isActive($value): bool
+    {
+        return $value === true || $value === 1 || $value === '1' || $value === 't' || $value === 'true';
     }
 }

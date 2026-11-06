@@ -50,6 +50,67 @@ class Mailer
         return $base . '/' . ltrim($path, '/');
     }
 
+    /**
+     * Sends the branded, single-use password reset email.
+     */
+    public static function sendPasswordReset(string $toEmail, string $toName, string $resetPath, int $ttlMinutes): bool
+    {
+        $link = self::link($resetPath);
+        $name = trim($toName) !== '' ? $toName : 'there';
+        $subject = 'Reset your Uptown Garage password';
+
+        $text = "Hi {$name},\n\n"
+            . "We received a request to reset the password for your Uptown Garage account.\n\n"
+            . "Choose a new password using the link below. This link expires in {$ttlMinutes} minutes and can only be used once.\n\n"
+            . "{$link}\n\n"
+            . "If you did not request a password reset, you can safely ignore this email - your password will not change.\n\n"
+            . "Uptown Garage";
+
+        $html = self::renderPasswordReset($name, $link, $ttlMinutes);
+
+        if (env('BREVO_API_KEY')) {
+            return self::viaBrevo($toEmail, $toName, $subject, $text, $html);
+        }
+        if (env('SMTP_HOST') || env('GMAIL_USER')) {
+            return self::viaSmtp($toEmail, $toName, $subject, $text, $html);
+        }
+        return false;
+    }
+
+    private static function renderPasswordReset(string $name, string $link, int $ttlMinutes): string
+    {
+        $safeName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+        $safeLink = htmlspecialchars($link, ENT_QUOTES, 'UTF-8');
+        $ttl = (int) $ttlMinutes;
+
+        return '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+            . '<meta name="viewport" content="width=device-width,initial-scale=1"></head>'
+            . '<body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;padding:28px 12px;">'
+            . '<tr><td align="center">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e3e7eb;">'
+            . '<tr><td style="background:#1c2b3a;padding:22px 32px;">'
+            . '<span style="display:inline-block;background:#d64545;width:10px;height:10px;border-radius:3px;margin-right:10px;"></span>'
+            . '<span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:0.3px;">Uptown Garage</span>'
+            . '</td></tr>'
+            . '<tr><td style="padding:34px 32px 10px;color:#374151;font-size:15px;line-height:1.65;">'
+            . '<h2 style="margin:0 0 14px;font-size:20px;color:#1c2b3a;">Password reset request</h2>'
+            . '<p style="margin:0 0 14px;">Hi ' . $safeName . ',</p>'
+            . '<p style="margin:0 0 16px;">We received a request to reset the password for your Uptown Garage account. Click the button below to choose a new password.</p>'
+            . '<p style="margin:24px 0 26px;"><a href="' . $safeLink . '" style="display:inline-block;background:#d64545;color:#ffffff;'
+            . 'text-decoration:none;font-weight:700;font-size:15px;padding:14px 28px;border-radius:8px;">Reset My Password</a></p>'
+            . '<p style="margin:0 0 8px;font-size:13px;color:#6b7684;">If the button does not work, copy and paste this link into your browser:</p>'
+            . '<p style="margin:0 0 20px;font-size:13px;word-break:break-all;"><a href="' . $safeLink . '" style="color:#2563eb;">' . $safeLink . '</a></p>'
+            . '<div style="background:#fff6e0;border-left:3px solid #b9820a;border-radius:6px;padding:12px 14px;font-size:13px;color:#7a5606;">'
+            . 'This link expires in <strong>' . $ttl . ' minutes</strong> and can only be used once.'
+            . '</div>'
+            . '<p style="margin:20px 0 0;font-size:13px;color:#6b7684;">If you did not request a password reset, you can safely ignore this email. Your password will not change.</p>'
+            . '</td></tr>'
+            . '<tr><td style="padding:18px 32px;background:#f9fafb;color:#9ca3af;font-size:12px;border-top:1px solid #e3e7eb;">'
+            . 'This is an automated message from Uptown Garage. Please do not reply to this email.'
+            . '</td></tr></table></td></tr></table></body></html>';
+    }
+
     private static function sender(): array
     {
         $email = env('BREVO_SENDER_EMAIL') ?: env('SMTP_FROM') ?: env('GMAIL_USER') ?: env('SMTP_USER');

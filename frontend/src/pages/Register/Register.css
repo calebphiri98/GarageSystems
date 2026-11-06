@@ -1,3 +1,1 @@
-.register-card {
-  max-width: 440px;
-}
+/* Register uses the shared auth styles in components/AuthLayout/AuthLayout.css */

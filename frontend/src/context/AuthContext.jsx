@@ -3,24 +3,34 @@ import api from '../api/api';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
+function readStoredUser() {
+  const stored = localStorage.getItem('user') || sessionStorage.getItem('user');
+  return stored ? JSON.parse(stored) : null;
+}
 
-  async function login(email, password) {
+function clearSession() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  sessionStorage.removeItem('token');
+  sessionStorage.removeItem('user');
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(readStoredUser);
+
+  async function login(email, password, remember = true) {
     const res = await api.post('/auth/login', { email, password });
     const { token, user } = res.data.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    clearSession();
+    const storage = remember ? localStorage : sessionStorage;
+    storage.setItem('token', token);
+    storage.setItem('user', JSON.stringify(user));
     setUser(user);
     return user;
   }
 
   function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    clearSession();
     setUser(null);
   }
 

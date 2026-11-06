@@ -5,6 +5,8 @@ import DashboardLayout from './components/DashboardLayout/DashboardLayout';
 
 import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword';
+import ResetPassword from './pages/ResetPassword/ResetPassword';
 import Register from './pages/Register/Register';
 
 import CustomerDashboard from './pages/customer/Dashboard/Dashboard';
@@ -53,6 +55,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<RootRoute />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/register" element={<Register />} />
 
           <Route path="/customer" element={

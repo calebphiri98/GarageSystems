@@ -72,13 +72,18 @@ class ServiceController
         $isActive = array_key_exists('is_active', $body) ? (bool) $body['is_active'] : $service['is_active'];
         $imageUrl = array_key_exists('image_url', $body) ? $body['image_url'] : $service['image_url'];
 
+        $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
         $upd = $db->prepare(
             'UPDATE services SET name = :name, description = :desc, estimated_price = :price, is_active = :active, image_url = :image WHERE id = :id'
         );
         $upd->bindValue(':name', $name);
         $upd->bindValue(':desc', $description);
         $upd->bindValue(':price', $price);
-        $upd->bindValue(':active', $isActive, PDO::PARAM_BOOL);
+        if ($driver === 'pgsql') {
+            $upd->bindValue(':active', $isActive ? 'true' : 'false', PDO::PARAM_STR);
+        } else {
+            $upd->bindValue(':active', $isActive ? 1 : 0, PDO::PARAM_INT);
+        }
         $upd->bindValue(':image', $imageUrl);
         $upd->bindValue(':id', $id, PDO::PARAM_INT);
         $upd->execute();

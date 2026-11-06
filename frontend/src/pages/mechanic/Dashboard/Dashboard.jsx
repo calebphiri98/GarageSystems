@@ -27,13 +27,24 @@ export default function MechanicDashboard() {
   const active = jobs.filter((j) => j.status !== 'Collected');
   const done = jobs.filter((j) => j.status === 'Collected');
 
+  const dateLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
-    <div className="page">
+    <div className="page mechanic-dashboard">
       <div className="page-header">
         <div>
           <h1>Hi {user?.name?.split(' ')[0]}, here's your work</h1>
           <p>Jobs the administrator has assigned to you.</p>
         </div>
+        <span className="dashboard-date">
+          <span className="dashboard-date-dot" aria-hidden="true" />
+          {dateLabel}
+        </span>
       </div>
 
       <div className="grid grid-stats">

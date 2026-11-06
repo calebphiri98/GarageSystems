@@ -25,14 +25,25 @@ export default function ManagerDashboard() {
     { label: 'Total revenue collected (MK)', value: Number(stats.total_revenue_paid).toLocaleString() },
   ];
 
+  const dateLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   return (
-    <div className="page">
+    <div className="page manager-dashboard">
       <div className="page-header">
         <div>
           <h1>Manager Overview</h1>
           <p>Prioritise approvals, collections and stock before they affect service.</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="manager-header-actions">
+          <span className="dashboard-date">
+            <span className="dashboard-date-dot" aria-hidden="true" />
+            {dateLabel}
+          </span>
           <Link to="/manager/reports" className="btn btn-outline">Open Reports</Link>
           <Link to="/manager/approvals" className="btn btn-primary">Review Approvals</Link>
         </div>

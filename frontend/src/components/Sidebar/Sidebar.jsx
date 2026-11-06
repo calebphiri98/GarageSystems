@@ -128,7 +128,7 @@ const LINKS = {
 export default function Sidebar({ role }) {
   const links = LINKS[role] || [];
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar sidebar-${role}`}>
       <div className="sidebar-brand">
         <span className="sidebar-brand-badge">
           <img src={logo} alt="Uptown Garage" />
