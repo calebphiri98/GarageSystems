@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import logo from '../../assets/logo.jpeg';
-import hero from '../../assets/garage-hero.jpg';
 import './AuthLayout.css';
 
 export default function AuthLayout({ children }) {
@@ -9,7 +8,7 @@ export default function AuthLayout({ children }) {
   return (
     <div className="auth-page">
       <section className="auth-brand-panel">
-        <div className="auth-brand-panel-bg" style={{ backgroundImage: `url(${hero})` }} aria-hidden="true" />
+        <div className="auth-brand-panel-bg" style={{ backgroundImage: `url(${logo})` }} aria-hidden="true" />
         <div className="auth-brand-panel-inner">
           <Link to="/" className="auth-logo" aria-label="Uptown Garage home">
             <span className="auth-logo-badge">
@@ -19,12 +18,15 @@ export default function AuthLayout({ children }) {
           </Link>
 
           <div className="auth-brand-copy">
-            <span className="auth-brand-eyebrow">Integrated Garage &amp; Auto Parts</span>
-            <h1>Your Vehicle,<br />Our Priority.</h1>
-            <p>
-              Manage your vehicle services, appointments and spare parts
-              conveniently with Uptown Garage.
-            </p>
+            <span className="auth-brand-lock" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="4" y="10" width="16" height="10" rx="2.5" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                <path d="M12 14v2.5" />
+              </svg>
+            </span>
+            <h1>Secure Login</h1>
+            <p>Your account is protected with encrypted sign-in.</p>
           </div>
 
           <span className="auth-brand-foot">© {year} Uptown Garage. All rights reserved.</span>
